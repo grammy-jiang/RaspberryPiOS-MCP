@@ -11,7 +11,6 @@ Design follows Doc 02 §2.5 (Core Python Interfaces) and Doc 05 §2.5 (Python To
 
 from __future__ import annotations
 
-import functools
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any
 

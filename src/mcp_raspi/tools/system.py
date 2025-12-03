@@ -27,8 +27,8 @@ async def handle_system_get_basic_info(
     and testing purposes.
 
     Args:
-        ctx: The ToolContext for this request.
-        params: Request parameters (empty for this tool).
+        _ctx: The ToolContext for this request (unused in this stub).
+        _params: Request parameters (unused; empty for this tool).
 
     Returns:
         Dictionary with system information:

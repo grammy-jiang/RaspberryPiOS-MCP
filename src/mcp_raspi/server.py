@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import sys
-from typing import TYPE_CHECKING, TextIO
+from typing import TextIO
 
 from mcp_raspi.context import CallerInfo, ToolContext
 from mcp_raspi.errors import ToolError
