@@ -244,9 +244,6 @@ class TestExceptionHandlingPatterns:
         except InvalidArgumentError as e:
             assert e.error_code == "invalid_argument"
             caught = True
-        else:
-            caught = False
-
         assert caught is True
 
     def test_catch_as_tool_error(self) -> None:
