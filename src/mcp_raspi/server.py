@@ -26,9 +26,6 @@ from mcp_raspi.protocol import (
 )
 from mcp_raspi.routing import ToolRegistry, get_default_registry
 
-if TYPE_CHECKING:
-    pass
-
 logger = get_logger(__name__)
 
 
