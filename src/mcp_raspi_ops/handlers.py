@@ -219,6 +219,7 @@ async def handle_get_info(_request: IPCRequest) -> dict[str, Any]:
     Returns:
         Dict with agent information.
     """
+    # Import here to avoid circular import (handlers is imported by __init__.py)
     from mcp_raspi_ops import __version__
 
     return {
