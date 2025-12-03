@@ -105,9 +105,7 @@ class TestToolError:
 
         with pytest.raises(ToolError) as exc_info:
             raise error
-
         assert exc_info.value.error_code == "test_error"
-
     def test_details_with_various_types(self) -> None:
         """Test details can contain various types."""
         details: dict[str, Any] = {
