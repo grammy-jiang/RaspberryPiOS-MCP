@@ -34,9 +34,6 @@ dev = [
     "types-PyYAML>=6.0",
 ]
 
-[project.scripts]
-mcp-raspi-server = "mcp_raspi.server.app:main"
-raspi-ops-agent = "mcp_raspi_ops.main:main"
 
 [build-system]
 requires = ["hatchling"]
