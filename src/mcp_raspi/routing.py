@@ -216,11 +216,5 @@ def tool_handler(
     def decorator(handler: ToolHandler) -> ToolHandler:
         target_registry = registry if registry is not None else get_default_registry()
         target_registry.register(name, handler)
-
-        @functools.wraps(handler)
-        async def wrapper(ctx: ToolContext, params: dict[str, Any]) -> Any:
-            return await handler(ctx, params)
-
-        return wrapper
-
+        return handler
     return decorator
