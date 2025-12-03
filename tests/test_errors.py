@@ -105,7 +105,9 @@ class TestToolError:
 
         with pytest.raises(ToolError) as exc_info:
             raise error
+
         assert exc_info.value.error_code == "test_error"
+
     def test_details_with_various_types(self) -> None:
         """Test details can contain various types."""
         details: dict[str, Any] = {
@@ -239,6 +241,7 @@ class TestExceptionHandlingPatterns:
 
     def test_catch_specific_error(self) -> None:
         """Test catching specific error type."""
+        caught = False
         try:
             raise InvalidArgumentError(message="Invalid input")
         except InvalidArgumentError as e:
