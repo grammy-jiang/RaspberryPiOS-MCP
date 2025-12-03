@@ -6,10 +6,16 @@ on:
   pull_request:
     branches: [main, develop]
 
+# Minimum permissions required for security
+permissions:
+  contents: read
+
 jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -42,6 +48,8 @@ jobs:
   test:
     name: Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -81,6 +89,8 @@ jobs:
   type-check:
     name: Type Check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -109,6 +119,8 @@ jobs:
   build:
     name: Build Package
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: [lint, test]
     steps:
       - uses: actions/checkout@v4
