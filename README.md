@@ -49,6 +49,8 @@ The full design is captured in the numbered specs under `docs/` (recommended rea
 - **[`docs/quick-start-guide.md`](docs/quick-start-guide.md)** – Get started in 10 minutes (all roles)
 - **[`docs/document-navigator.md`](docs/document-navigator.md)** – Reading paths, dependencies, reference matrix
 - **[`docs/phase-1-scope-matrix.md`](docs/phase-1-scope-matrix.md)** – Complete Phase 1 implementation plan (AI-optimized)
+- **[`docs/github-copilot-agent-issue-plan.md`](docs/github-copilot-agent-issue-plan.md)** – GitHub Copilot Agent issue breakdown (12 issues, 6-hour sessions)
+- **[`docs/github-issues-quick-reference.md`](docs/github-issues-quick-reference.md)** – Quick reference: all 12 issue titles and dependencies
 - **[`docs/test-matrix.md`](docs/test-matrix.md)** – Device/environment/function test coverage matrix
 - **[`docs/acceptance-checklist.md`](docs/acceptance-checklist.md)** – Pre-release validation checklist
 
@@ -99,7 +101,7 @@ This repository currently contains **documentation only**; implementation work (
 
 ## AI-Assisted Development
 
-This project is designed for **AI-first development workflows** where AI assistants (like Claude, GPT-4, etc.) implement features based on comprehensive design documentation with human oversight.
+This project is designed for **AI-first development workflows** where AI assistants (like Claude, GitHub Copilot, GPT-4, etc.) implement features based on comprehensive design documentation with human oversight.
 
 **Key differences from traditional development**:
 - **Effort estimates** are calibrated for AI coding speed (4-6 weeks total vs 3-4 months traditional)
@@ -108,6 +110,8 @@ This project is designed for **AI-first development workflows** where AI assista
 - **Human role**: Review code, test on hardware, provide feedback, approve designs
 
 **For AI assistants**: Start with [`docs/phase-1-scope-matrix.md`](docs/phase-1-scope-matrix.md) which contains specific instructions on how to use these design documents effectively.
+
+**For GitHub Copilot Agent**: See [`docs/github-copilot-agent-issue-plan.md`](docs/github-copilot-agent-issue-plan.md) for a complete breakdown of Phase 1 into 12 GitHub Issues optimized for 6-hour Copilot Agent sessions. Each issue includes acceptance criteria, design doc references, implementation notes, and time breakdowns.
 
 ## High‑Level Design Summary
 
