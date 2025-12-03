@@ -186,8 +186,21 @@ class MCPServer:
                         # EOF reached
                         break
 
-                    # Decode and strip whitespace
-                    request_json = line.decode("utf-8").strip()
+                    # Decode with error handling for non-UTF-8 input
+                    try:
+                        request_json = line.decode("utf-8").strip()
+                    except UnicodeDecodeError as e:
+                        logger.warning(
+                            "Invalid UTF-8 encoding in request",
+                            extra={"error": str(e)},
+                        )
+                        error = create_internal_error(
+                            "Invalid request encoding: UTF-8 required"
+                        )
+                        error_response = format_error_response(None, error)
+                        self._write_response(error_response.to_json())
+                        continue
+
                     if not request_json:
                         continue
 

@@ -264,7 +264,9 @@ def parse_request(request_json: str) -> JSONRPCRequest:
             code=INVALID_PARAMS,
             message="Invalid params: 'params' must be an object or array",
         )
-    # We normalize list params to dict (not commonly used in MCP)
+    # JSON-RPC 2.0 allows both object and positional (array) params.
+    # For MCP tools, we normalize array params to a dict with '_args' key.
+    # This allows handlers to access positional params as params.get("_args").
     if isinstance(params, list):
         params = {"_args": params}
 

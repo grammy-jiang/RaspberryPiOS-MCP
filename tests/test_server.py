@@ -188,7 +188,7 @@ class TestProcessRequest:
 
     @pytest.mark.asyncio
     async def test_notification_no_response(self, registry: ToolRegistry) -> None:
-        """Test that notifications (no id) don't return a response."""
+        """Test that notifications (no id) return None (no response per JSON-RPC spec)."""
         request_json = json.dumps({
             "jsonrpc": "2.0",
             "method": "system.get_basic_info",
@@ -197,8 +197,8 @@ class TestProcessRequest:
 
         response = await process_request(request_json, registry)
 
-        # Notifications should return None or empty string
-        assert response is None or response == ""
+        # Notifications must return None per JSON-RPC 2.0 spec
+        assert response is None
 
 
 # =============================================================================
