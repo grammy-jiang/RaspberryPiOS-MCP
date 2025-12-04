@@ -468,8 +468,12 @@ class IPCClient:
             try:
                 self._writer.close()
                 await self._writer.wait_closed()
-            except Exception:
-                pass
+            except Exception as e:
+                # Ignore exceptions during cleanup, but log for diagnostics.
+                logger.warning(
+                    "Exception during IPC connection cleanup (ignored)",
+                    extra={"error": str(e)}
+                )
 
         self._reader = None
         self._writer = None
