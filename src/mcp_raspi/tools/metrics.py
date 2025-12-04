@@ -13,6 +13,7 @@ Doc 06 §4-5 (Metrics module design).
 
 from __future__ import annotations
 
+import threading
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
@@ -38,11 +39,15 @@ logger = get_logger(__name__)
 # Global sampler instance (initialized lazily)
 _sampler: MetricsSampler | None = None
 _storage: MetricsStorage | None = None
+_init_lock = threading.Lock()
 
 
 def _get_sampler(config: AppConfig | None = None) -> MetricsSampler:
     """
     Get or create the global sampler instance.
+
+    Thread-safe initialization using a lock to prevent race conditions
+    when multiple threads or asyncio tasks call this concurrently.
 
     Args:
         config: Optional AppConfig for configuration.
@@ -53,14 +58,17 @@ def _get_sampler(config: AppConfig | None = None) -> MetricsSampler:
     global _sampler, _storage
 
     if _sampler is None:
-        # Get storage path from config or use default
-        storage_path = "/var/lib/mcp-raspi/metrics/metrics.db"
-        if config is not None:
-            storage_path = config.metrics.storage_path
+        with _init_lock:
+            # Double-check after acquiring lock
+            if _sampler is None:
+                # Get storage path from config or use default
+                storage_path = "/var/lib/mcp-raspi/metrics/metrics.db"
+                if config is not None:
+                    storage_path = config.metrics.storage_path
 
-        _storage = MetricsStorage(storage_path)
-        metrics_config = config.metrics if config else None
-        _sampler = MetricsSampler(_storage, metrics_config)
+                _storage = MetricsStorage(storage_path)
+                metrics_config = config.metrics if config else None
+                _sampler = MetricsSampler(_storage, metrics_config)
 
     return _sampler
 
@@ -68,6 +76,9 @@ def _get_sampler(config: AppConfig | None = None) -> MetricsSampler:
 def _get_storage(config: AppConfig | None = None) -> MetricsStorage:
     """
     Get or create the global storage instance.
+
+    Thread-safe initialization using a lock to prevent race conditions
+    when multiple threads or asyncio tasks call this concurrently.
 
     Args:
         config: Optional AppConfig for configuration.
@@ -78,10 +89,13 @@ def _get_storage(config: AppConfig | None = None) -> MetricsStorage:
     global _storage
 
     if _storage is None:
-        storage_path = "/var/lib/mcp-raspi/metrics/metrics.db"
-        if config is not None:
-            storage_path = config.metrics.storage_path
-        _storage = MetricsStorage(storage_path)
+        with _init_lock:
+            # Double-check after acquiring lock
+            if _storage is None:
+                storage_path = "/var/lib/mcp-raspi/metrics/metrics.db"
+                if config is not None:
+                    storage_path = config.metrics.storage_path
+                _storage = MetricsStorage(storage_path)
 
     return _storage
 
@@ -93,8 +107,9 @@ def reset_sampler() -> None:
     Used for testing to ensure clean state between tests.
     """
     global _sampler, _storage
-    _sampler = None
-    _storage = None
+    with _init_lock:
+        _sampler = None
+        _storage = None
 
 
 # =============================================================================
@@ -290,6 +305,7 @@ async def handle_metrics_get_status(
         - metrics_enabled: List of metrics being collected
         - sample_count: Total samples collected
         - last_sample_at: Last sample timestamp
+        - storage_error: Error message if storage statistics unavailable
     """
     sampler = _get_sampler(config)
     storage = _get_storage(config)
@@ -302,6 +318,7 @@ async def handle_metrics_get_status(
         await storage.initialize()
         result["total_samples_stored"] = await storage.get_sample_count()
         result["metric_types_available"] = await storage.get_metric_types()
+        result["storage_error"] = None
     except Exception as e:
         logger.warning(
             "Could not get storage statistics",
@@ -309,6 +326,7 @@ async def handle_metrics_get_status(
         )
         result["total_samples_stored"] = None
         result["metric_types_available"] = []
+        result["storage_error"] = str(e)
 
     return result
 

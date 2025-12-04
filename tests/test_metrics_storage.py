@@ -616,7 +616,7 @@ class TestMetricsStorageConcurrency:
 
     @pytest.mark.asyncio
     async def test_concurrent_reads_and_writes(self, storage: MetricsStorage) -> None:
-        """Test concurrent read and write operations."""
+        """Test concurrent read and write operations maintain data integrity."""
         # Pre-populate
         timestamp = time.time()
         await storage.insert_batch(
@@ -629,14 +629,19 @@ class TestMetricsStorageConcurrency:
         async def read_samples() -> list[MetricSample]:
             return await storage.query(limit=10)
 
-        async def write_samples() -> None:
+        async def write_samples() -> int:
+            """Write samples and return count of successful inserts."""
+            inserted = 0
             for i in range(10):
                 sample = MetricSample(
                     timestamp=time.time(),
                     metric_type="concurrent",
                     value=float(i),
                 )
-                await storage.insert(sample)
+                sample_id = await storage.insert(sample)
+                if sample_id > 0:
+                    inserted += 1
+            return inserted
 
         # Run concurrent reads and writes
         results = await asyncio.gather(
@@ -650,6 +655,23 @@ class TestMetricsStorageConcurrency:
         assert len(results[0]) == 10
         assert len(results[2]) == 10
 
+        # Verify both write operations returned successful counts
+        write_count_1 = results[1]
+        write_count_2 = results[3]
+        assert write_count_1 == 10, f"First write batch failed: {write_count_1} inserts"
+        assert write_count_2 == 10, f"Second write batch failed: {write_count_2} inserts"
+
         # Total count should include original + new samples
         count = await storage.get_sample_count()
-        assert count == 70  # 50 original + 20 new
+        assert count == 70, f"Expected 70 samples (50 + 20), got {count}"
+
+        # Verify data integrity: all concurrent samples exist with correct metric_type
+        concurrent_samples = await storage.query(metric_type="concurrent", limit=100)
+        assert len(concurrent_samples) == 20, (
+            f"Expected 20 concurrent samples, got {len(concurrent_samples)}"
+        )
+
+        # Verify all values from 0-9 appear twice (once from each write batch)
+        values = [int(s.value) for s in concurrent_samples]
+        for v in range(10):
+            assert values.count(v) == 2, f"Expected value {v} to appear twice"

@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import tempfile
 import time
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
@@ -77,6 +79,34 @@ def cleanup_sampler():
     reset_sampler()
     yield
     reset_sampler()
+
+
+@asynccontextmanager
+async def sampler_context(
+    ctx: ToolContext, params: dict, config: AppConfig
+) -> AsyncGenerator[dict, None]:
+    """
+    Async context manager for proper sampler lifecycle management.
+
+    Ensures the sampler is stopped even if the test raises an exception.
+    Only attempts to stop if the sampler was successfully started.
+
+    Args:
+        ctx: Tool context for the request.
+        params: Parameters for start_sampling.
+        config: App configuration.
+
+    Yields:
+        Result from handle_metrics_start_sampling.
+    """
+    started = False
+    try:
+        result = await handle_metrics_start_sampling(ctx, params, config=config)
+        started = True
+        yield result
+    finally:
+        if started:
+            await handle_metrics_stop_sampling(ctx, {}, config=config)
 
 
 # =============================================================================
@@ -146,70 +176,54 @@ class TestMetricsStartSampling:
         self, viewer_ctx: ToolContext, test_config: AppConfig
     ) -> None:
         """Test that handler returns a dictionary."""
-        try:
-            result = await handle_metrics_start_sampling(
-                viewer_ctx, {"interval_seconds": 5}, config=test_config
-            )
+        async with sampler_context(
+            viewer_ctx, {"interval_seconds": 5}, test_config
+        ) as result:
             assert isinstance(result, dict)
-        finally:
-            await handle_metrics_stop_sampling(viewer_ctx, {}, config=test_config)
 
     @pytest.mark.asyncio
     async def test_contains_required_fields(
         self, viewer_ctx: ToolContext, test_config: AppConfig
     ) -> None:
         """Test that result contains required fields."""
-        try:
-            result = await handle_metrics_start_sampling(
-                viewer_ctx, {"interval_seconds": 5}, config=test_config
-            )
-
+        async with sampler_context(
+            viewer_ctx, {"interval_seconds": 5}, test_config
+        ) as result:
             assert "status" in result
             assert "job_id" in result
             assert "interval_seconds" in result
             assert "retention_days" in result
             assert "metrics_enabled" in result
-        finally:
-            await handle_metrics_stop_sampling(viewer_ctx, {}, config=test_config)
 
     @pytest.mark.asyncio
     async def test_status_is_running(
         self, viewer_ctx: ToolContext, test_config: AppConfig
     ) -> None:
         """Test that status is 'running' after start."""
-        try:
-            result = await handle_metrics_start_sampling(
-                viewer_ctx, {"interval_seconds": 5}, config=test_config
-            )
+        async with sampler_context(
+            viewer_ctx, {"interval_seconds": 5}, test_config
+        ) as result:
             assert result["status"] == "running"
-        finally:
-            await handle_metrics_stop_sampling(viewer_ctx, {}, config=test_config)
 
     @pytest.mark.asyncio
     async def test_custom_interval(
         self, viewer_ctx: ToolContext, test_config: AppConfig
     ) -> None:
         """Test starting with custom interval."""
-        try:
-            result = await handle_metrics_start_sampling(
-                viewer_ctx, {"interval_seconds": 120}, config=test_config
-            )
+        async with sampler_context(
+            viewer_ctx, {"interval_seconds": 120}, test_config
+        ) as result:
             assert result["interval_seconds"] == 120
-        finally:
-            await handle_metrics_stop_sampling(viewer_ctx, {}, config=test_config)
 
     @pytest.mark.asyncio
     async def test_custom_retention(
         self, viewer_ctx: ToolContext, test_config: AppConfig
     ) -> None:
         """Test starting with custom retention."""
-        try:
-            result = await handle_metrics_start_sampling(
-                viewer_ctx, {"retention_days": 30}, config=test_config
-            )
+        async with sampler_context(
+            viewer_ctx, {"retention_days": 30}, test_config
+        ) as result:
             assert result["retention_days"] == 30
-        finally:
-            await handle_metrics_stop_sampling(viewer_ctx, {}, config=test_config)
 
     @pytest.mark.asyncio
     async def test_custom_metrics(
@@ -217,13 +231,10 @@ class TestMetricsStartSampling:
     ) -> None:
         """Test starting with custom metrics list."""
         metrics = [METRIC_CPU_PERCENT, METRIC_MEMORY_PERCENT]
-        try:
-            result = await handle_metrics_start_sampling(
-                viewer_ctx, {"metrics": metrics}, config=test_config
-            )
+        async with sampler_context(
+            viewer_ctx, {"metrics": metrics}, test_config
+        ) as result:
             assert result["metrics_enabled"] == metrics
-        finally:
-            await handle_metrics_stop_sampling(viewer_ctx, {}, config=test_config)
 
 
 # =============================================================================

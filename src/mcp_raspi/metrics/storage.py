@@ -237,6 +237,16 @@ class MetricsStorage:
                     details={"db_path": str(self.db_path)},
                 ) from e
 
+    async def _ensure_initialized(self) -> None:
+        """
+        Ensure the database is initialized in a thread-safe manner.
+
+        This method checks the flag and calls initialize() which handles
+        its own locking for thread safety.
+        """
+        if not self._initialized:
+            await self.initialize()
+
     async def insert(self, sample: MetricSample) -> int:
         """
         Insert a single metric sample.
@@ -250,8 +260,7 @@ class MetricsStorage:
         Raises:
             FailedPreconditionError: If the database is not initialized or write fails.
         """
-        if not self._initialized:
-            await self.initialize()
+        await self._ensure_initialized()
 
         def _insert() -> int:
             with self._get_connection() as conn:
@@ -303,8 +312,7 @@ class MetricsStorage:
         if not samples:
             return 0
 
-        if not self._initialized:
-            await self.initialize()
+        await self._ensure_initialized()
 
         def _insert_batch() -> int:
             with self._get_connection() as conn:
@@ -371,8 +379,7 @@ class MetricsStorage:
             InvalidArgumentError: If parameters are invalid.
             FailedPreconditionError: If the query fails.
         """
-        if not self._initialized:
-            await self.initialize()
+        await self._ensure_initialized()
 
         # Validate parameters
         if limit < 1 or limit > 10000:
@@ -467,10 +474,13 @@ class MetricsStorage:
 
         Computes min, max, avg, and count in a single efficient SQL query.
 
+        Note: The time range is inclusive on both ends (start_time <= timestamp <= end_time).
+        This differs from Python's typical half-open range convention [start, end).
+
         Args:
             metric_type: The metric type to aggregate.
-            start_time: Start of the time range (Unix timestamp).
-            end_time: End of the time range (Unix timestamp).
+            start_time: Start of the time range (Unix timestamp, inclusive).
+            end_time: End of the time range (Unix timestamp, inclusive).
 
         Returns:
             AggregationResult with min, max, avg, count.
@@ -479,8 +489,7 @@ class MetricsStorage:
             InvalidArgumentError: If parameters are invalid.
             FailedPreconditionError: If the query fails.
         """
-        if not self._initialized:
-            await self.initialize()
+        await self._ensure_initialized()
 
         if not metric_type:
             raise InvalidArgumentError(
@@ -551,8 +560,7 @@ class MetricsStorage:
         Raises:
             FailedPreconditionError: If the deletion fails.
         """
-        if not self._initialized:
-            await self.initialize()
+        await self._ensure_initialized()
 
         def _delete() -> int:
             with self._get_connection() as conn:
@@ -591,8 +599,7 @@ class MetricsStorage:
         Returns:
             List of metric type strings.
         """
-        if not self._initialized:
-            await self.initialize()
+        await self._ensure_initialized()
 
         def _get_types() -> list[str]:
             with self._get_connection() as conn:
@@ -623,8 +630,7 @@ class MetricsStorage:
         Returns:
             Total number of samples.
         """
-        if not self._initialized:
-            await self.initialize()
+        await self._ensure_initialized()
 
         def _count() -> int:
             with self._get_connection() as conn:

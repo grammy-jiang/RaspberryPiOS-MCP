@@ -44,6 +44,14 @@ DEFAULT_RETENTION_DAYS = 7
 MIN_RETENTION_DAYS = 1
 MAX_RETENTION_DAYS = 365
 
+# Retention check interval (how often to clean up old data)
+DEFAULT_RETENTION_CHECK_INTERVAL = 3600  # seconds (1 hour)
+
+# Error handling / circuit breaker constants
+MAX_CONSECUTIVE_ERRORS = 10  # Stop sampler after this many consecutive errors
+INITIAL_BACKOFF_SECONDS = 1.0  # Initial backoff delay
+MAX_BACKOFF_SECONDS = 60.0  # Maximum backoff delay
+
 # Metric type names
 METRIC_CPU_PERCENT = "cpu_percent"
 METRIC_MEMORY_PERCENT = "memory_percent"
@@ -91,7 +99,8 @@ class SamplerState:
         started_at: When the sampler was started.
         last_sample_at: When the last sample was collected.
         sample_count: Total number of samples collected.
-        error_count: Number of sampling errors.
+        error_count: Total number of sampling errors.
+        consecutive_errors: Number of consecutive errors (resets on success).
         last_error: Last error message if any.
     """
 
@@ -104,6 +113,7 @@ class SamplerState:
     last_sample_at: datetime | None = None
     sample_count: int = 0
     error_count: int = 0
+    consecutive_errors: int = 0
     last_error: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -120,6 +130,7 @@ class SamplerState:
             ),
             "sample_count": self.sample_count,
             "error_count": self.error_count,
+            "consecutive_errors": self.consecutive_errors,
             "last_error": self.last_error,
         }
 
@@ -300,6 +311,8 @@ class MetricsSampler:
         self._task: asyncio.Task[None] | None = None
         self._stop_event = asyncio.Event()
         self._lock = asyncio.Lock()
+        # Track last retention check to avoid running immediately on restart
+        self._last_retention_check: float = 0.0
 
         # Apply config defaults if provided
         if config:
@@ -328,6 +341,7 @@ class MetricsSampler:
             last_sample_at=self._state.last_sample_at,
             sample_count=self._state.sample_count,
             error_count=self._state.error_count,
+            consecutive_errors=self._state.consecutive_errors,
             last_error=self._state.last_error,
         )
 
@@ -410,6 +424,7 @@ class MetricsSampler:
             self._state.started_at = datetime.now()
             self._state.sample_count = 0
             self._state.error_count = 0
+            self._state.consecutive_errors = 0
             self._state.last_error = None
             self._stop_event.clear()
 
@@ -483,9 +498,10 @@ class MetricsSampler:
         Main sampling loop that runs in the background.
 
         Collects metrics at the configured interval and handles errors gracefully.
+        Implements exponential backoff on consecutive errors and stops the sampler
+        after MAX_CONSECUTIVE_ERRORS consecutive failures to prevent resource exhaustion.
         """
-        retention_check_interval = 3600  # Check retention every hour
-        last_retention_check = 0.0
+        current_backoff = 0.0
 
         while not self._stop_event.is_set():
             try:
@@ -499,25 +515,56 @@ class MetricsSampler:
                     self._state.sample_count += len(samples)
                     self._state.last_sample_at = datetime.now()
 
-                # Periodic retention check
+                # Reset consecutive errors and backoff on success
+                self._state.consecutive_errors = 0
+                current_backoff = 0.0
+
+                # Periodic retention check (uses instance variable to persist across restarts)
                 current_time = time.time()
-                if current_time - last_retention_check > retention_check_interval:
+                if current_time - self._last_retention_check > DEFAULT_RETENTION_CHECK_INTERVAL:
                     await self._enforce_retention()
-                    last_retention_check = current_time
+                    self._last_retention_check = current_time
 
             except Exception as e:
                 self._state.error_count += 1
+                self._state.consecutive_errors += 1
                 self._state.last_error = str(e)
-                logger.error(
-                    "Error during metrics sampling",
-                    extra={"error": str(e), "job_id": self._state.job_id},
+
+                # Calculate exponential backoff
+                current_backoff = min(
+                    INITIAL_BACKOFF_SECONDS * (2 ** (self._state.consecutive_errors - 1)),
+                    MAX_BACKOFF_SECONDS,
                 )
 
-            # Wait for next sample interval or stop signal
+                logger.error(
+                    "Error during metrics sampling",
+                    extra={
+                        "error": str(e),
+                        "job_id": self._state.job_id,
+                        "consecutive_errors": self._state.consecutive_errors,
+                        "backoff_seconds": current_backoff,
+                    },
+                )
+
+                # Circuit breaker: stop after too many consecutive errors
+                if self._state.consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
+                    logger.critical(
+                        "Stopping metrics sampler due to too many consecutive errors",
+                        extra={
+                            "job_id": self._state.job_id,
+                            "consecutive_errors": self._state.consecutive_errors,
+                            "last_error": str(e),
+                        },
+                    )
+                    self._state.status = SamplerStatus.STOPPED
+                    break
+
+            # Wait for next sample interval (plus backoff if errors) or stop signal
+            wait_time = float(self._state.interval_seconds) + current_backoff
             try:
                 await asyncio.wait_for(
                     self._stop_event.wait(),
-                    timeout=float(self._state.interval_seconds),
+                    timeout=wait_time,
                 )
                 # Stop event was set
                 break
