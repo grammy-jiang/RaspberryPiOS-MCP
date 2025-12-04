@@ -108,7 +108,12 @@ class TestSystemGetBasicInfo:
 
     @pytest.mark.asyncio
     async def test_contains_required_fields(self, viewer_ctx: ToolContext) -> None:
-        """Test that result contains all required fields per Doc 05 §3.1."""
+        """Test that result contains all required fields.
+
+        Required fields (from Doc 05 §3.1 system.get_basic_info spec):
+        - hostname, model, cpu_arch, cpu_cores, memory_total_bytes
+        - os_name, os_version, kernel_version, uptime_seconds, timestamp
+        """
         result = await handle_system_get_basic_info(viewer_ctx, {})
 
         required_fields = [
@@ -197,7 +202,12 @@ class TestSystemGetHealthSnapshot:
 
     @pytest.mark.asyncio
     async def test_contains_required_fields(self, viewer_ctx: ToolContext) -> None:
-        """Test that result contains all required fields per Doc 05 §3.2."""
+        """Test that result contains all required health metrics fields.
+
+        Required fields (from Doc 05 §3.2 system.get_health_snapshot spec):
+        - timestamp, cpu_usage_percent, memory_used_bytes, memory_total_bytes
+        - disk_used_bytes, disk_total_bytes, throttling_flags
+        """
         result = await handle_system_get_health_snapshot(viewer_ctx, {})
 
         required_fields = [
@@ -299,7 +309,11 @@ class TestSystemGetNetworkInfo:
 
     @pytest.mark.asyncio
     async def test_interface_structure(self, viewer_ctx: ToolContext) -> None:
-        """Test each interface has required fields per Doc 05 addendum §1.1."""
+        """Test each interface has required fields.
+
+        Required interface fields (from Doc 05 addendum §1.1):
+        - name, mac_address, state, ipv4_addresses, ipv6_addresses
+        """
         result = await handle_system_get_network_info(viewer_ctx, {})
         for iface in result["interfaces"]:
             assert "name" in iface
