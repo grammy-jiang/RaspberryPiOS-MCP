@@ -196,5 +196,5 @@ class IPCServerProtocol:
         try:
             self.writer.close()
             await self.writer.wait_closed()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.exception("Exception during IPCServerProtocol.close()", exc_info=exc)
