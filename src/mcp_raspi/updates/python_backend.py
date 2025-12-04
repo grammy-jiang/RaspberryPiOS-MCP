@@ -12,7 +12,7 @@ from __future__ import annotations
 import asyncio
 import shutil
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from mcp_raspi.errors import (
     FailedPreconditionError,
@@ -24,6 +24,16 @@ from mcp_raspi.logging import get_logger
 from mcp_raspi.updates.backends import PreparedUpdate, UpdateBackend
 from mcp_raspi.updates.operations import create_version_directory, ensure_directory
 from mcp_raspi.updates.version import parse_semantic_version
+
+# Optional httpx dependency for PyPI JSON API fallback
+try:
+    import httpx
+
+    _HTTPX_AVAILABLE = True
+except ImportError:
+    _HTTPX_AVAILABLE = False
+    if TYPE_CHECKING:
+        import httpx
 
 logger = get_logger(__name__)
 
@@ -228,11 +238,10 @@ class PythonPackageBackend(UpdateBackend):
         Returns:
             List of available version strings.
         """
+        if not _HTTPX_AVAILABLE:
+            return []
 
         try:
-            # Use httpx if available
-            import httpx
-
             async with httpx.AsyncClient() as client:
                 url = f"https://pypi.org/pypi/{self.package_name}/json"
                 response = await client.get(url, timeout=30.0)
@@ -251,8 +260,6 @@ class PythonPackageBackend(UpdateBackend):
                         key=lambda v: self._version_key(v), reverse=True
                     )
                     return valid_versions
-        except ImportError:
-            pass
         except Exception as e:
             logger.debug(f"PyPI JSON API fallback failed: {e}")
 

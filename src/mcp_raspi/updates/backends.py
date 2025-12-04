@@ -9,6 +9,7 @@ Design follows Doc 10 §3.4 specifications.
 
 from __future__ import annotations
 
+import shutil
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
@@ -155,8 +156,6 @@ class UpdateBackend(ABC):
         if update.staging_path:
             staging_path = Path(update.staging_path)
             if staging_path.exists():
-                import shutil
-
                 shutil.rmtree(staging_path, ignore_errors=True)
 
     @abstractmethod

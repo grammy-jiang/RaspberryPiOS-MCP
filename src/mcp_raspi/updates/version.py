@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 from datetime import UTC, datetime
 from pathlib import Path
@@ -500,8 +501,6 @@ class VersionManager:
             json.dump(data, f, indent=2)
             f.flush()
             # Ensure data is written to disk
-            import os
-
             os.fsync(f.fileno())
 
         # Atomic rename
