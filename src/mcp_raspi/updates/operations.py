@@ -258,17 +258,21 @@ def list_installed_versions(releases_dir: Path) -> list[str]:
     if not releases_dir.exists():
         return []
 
-    versions = []
-    for entry in releases_dir.iterdir():
-        if entry.is_dir() and entry.name.startswith("v"):
-            version = entry.name[1:]  # Remove 'v' prefix
-            versions.append(version)
+    version_entries = []
+    try:
+        with os.scandir(releases_dir) as it:
+            for entry in it:
+                if entry.is_dir() and entry.name.startswith("v"):
+                    version = entry.name[1:]  # Remove 'v' prefix
+                    # Use entry.stat() directly (cached)
+                    version_entries.append((version, entry.stat().st_mtime))
+    except FileNotFoundError:
+        return []
 
     # Sort by modification time (newest first)
-    version_paths = [(v, releases_dir / f"v{v}") for v in versions]
-    version_paths.sort(key=lambda x: x[1].stat().st_mtime, reverse=True)
+    version_entries.sort(key=lambda x: x[1], reverse=True)
 
-    return [v for v, _ in version_paths]
+    return [v for v, _ in version_entries]
 
 
 def get_current_version_from_symlink(
