@@ -324,6 +324,14 @@ class PythonPackageBackend(UpdateBackend):
 
         # Create staging directory
         staging_path = self.staging_dir / f"{self.package_name}-{version}"
+        # Validate that staging_path is within self.staging_dir
+        resolved_staging_dir = self.staging_dir.resolve()
+        resolved_staging_path = staging_path.resolve()
+        if not str(resolved_staging_path).startswith(str(resolved_staging_dir)):
+            raise InvalidArgumentError(
+                f"Unsafe staging path detected: {resolved_staging_path} is not within {resolved_staging_dir}",
+                details={"staging_path": str(resolved_staging_path), "staging_dir": str(resolved_staging_dir)},
+            )
         ensure_directory(staging_path)
 
         # Download package to staging
