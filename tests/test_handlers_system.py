@@ -163,6 +163,148 @@ class TestExecutePowerCommand:
 
             assert exc_info.value.code == "unavailable"
 
+    @pytest.mark.asyncio
+    async def test_command_timeout_raises_error(self) -> None:
+        """Test command timeout raises HandlerError."""
+        with patch("subprocess.run") as mock_run:
+            import subprocess
+
+            mock_run.side_effect = subprocess.TimeoutExpired(cmd=["test"], timeout=30)
+
+            with pytest.raises(HandlerError) as exc_info:
+                await _execute_power_command(
+                    command=["systemctl", "reboot"],
+                    delay_seconds=0,
+                    operation="system.reboot",
+                    reason="test",
+                )
+
+            assert exc_info.value.code == "internal"
+            assert "timed out" in exc_info.value.message.lower()
+
+    @pytest.mark.asyncio
+    async def test_scheduled_shutdown_reboot(self) -> None:
+        """Test scheduled reboot with delay uses shutdown command."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stderr="")
+
+            with patch("asyncio.sleep"):
+                result = await _execute_power_command(
+                    command=["systemctl", "reboot"],
+                    delay_seconds=60,  # 1 minute delay
+                    operation="system.reboot",
+                    reason="scheduled test",
+                )
+
+                assert result["executed"] is True
+                assert result["method"] == "scheduled_shutdown"
+                # Should have called shutdown -r
+                mock_run.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_scheduled_shutdown_poweroff(self) -> None:
+        """Test scheduled shutdown with delay uses shutdown -h."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stderr="")
+
+            result = await _execute_power_command(
+                command=["systemctl", "poweroff"],
+                delay_seconds=60,
+                operation="system.shutdown",
+                reason="power save",
+            )
+
+            assert result["executed"] is True
+            assert result["method"] == "scheduled_shutdown"
+
+    @pytest.mark.asyncio
+    async def test_scheduled_shutdown_fallback_on_failure(self) -> None:
+        """Test scheduled shutdown falls back to direct command on failure."""
+        call_count = [0]
+
+        def mock_run_side_effect(*_args, **_kwargs):  # noqa: ARG001
+            call_count[0] += 1
+            if call_count[0] == 1:
+                # First call (shutdown -r/h) fails
+                return MagicMock(returncode=1, stderr="command failed")
+            else:
+                # Second call (systemctl) succeeds
+                return MagicMock(returncode=0, stderr="")
+
+        with (
+            patch("subprocess.run", side_effect=mock_run_side_effect),
+            patch("asyncio.sleep") as mock_sleep,
+        ):
+            result = await _execute_power_command(
+                command=["systemctl", "reboot"],
+                delay_seconds=60,
+                operation="system.reboot",
+                reason="test",
+            )
+
+            assert result["executed"] is True
+            assert result["method"] == "direct_systemctl"
+            # Should have waited
+            mock_sleep.assert_called_once_with(60)
+
+    @pytest.mark.asyncio
+    async def test_scheduled_shutdown_not_found_fallback(self) -> None:
+        """Test fallback when shutdown command not found."""
+        call_count = [0]
+
+        def mock_run_side_effect(*_args, **_kwargs):  # noqa: ARG001
+            call_count[0] += 1
+            if call_count[0] == 1:
+                # First call (shutdown) not found
+                raise FileNotFoundError("shutdown not found")
+            else:
+                # Second call (systemctl) succeeds
+                return MagicMock(returncode=0, stderr="")
+
+        with (
+            patch("subprocess.run", side_effect=mock_run_side_effect),
+            patch("asyncio.sleep") as mock_sleep,
+        ):
+            result = await _execute_power_command(
+                command=["systemctl", "reboot"],
+                delay_seconds=60,
+                operation="system.reboot",
+                reason="test",
+            )
+
+            assert result["executed"] is True
+            mock_sleep.assert_called_once_with(60)
+
+    @pytest.mark.asyncio
+    async def test_scheduled_shutdown_timeout_fallback(self) -> None:
+        """Test fallback when shutdown command times out."""
+        import subprocess
+
+        call_count = [0]
+
+        def mock_run_side_effect(*_args, **_kwargs):  # noqa: ARG001
+            call_count[0] += 1
+            if call_count[0] == 1:
+                # First call (shutdown) times out
+                raise subprocess.TimeoutExpired(cmd=["shutdown"], timeout=10)
+            else:
+                # Second call (systemctl) succeeds
+                return MagicMock(returncode=0, stderr="")
+
+        with (
+            patch("subprocess.run", side_effect=mock_run_side_effect),
+            patch("asyncio.sleep") as mock_sleep,
+        ):
+            result = await _execute_power_command(
+                command=["systemctl", "reboot"],
+                delay_seconds=60,
+                operation="system.reboot",
+                reason="test",
+            )
+
+            assert result["executed"] is True
+            mock_sleep.assert_called_once_with(60)
+
 
 # =============================================================================
 # Tests for System Reboot Handler
