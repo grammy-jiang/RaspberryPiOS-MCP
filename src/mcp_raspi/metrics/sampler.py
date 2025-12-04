@@ -449,8 +449,15 @@ class MetricsSampler:
                 except TimeoutError:
                     logger.warning("Sampler task did not stop gracefully, cancelling")
                     self._task.cancel()
-                    with contextlib.suppress(asyncio.CancelledError):
+                    try:
                         await self._task
+                    except asyncio.CancelledError:
+                        pass
+                    except Exception as e:
+                        logger.error(
+                            "Exception during sampler task cancellation",
+                            extra={"error": str(e), "job_id": self._state.job_id},
+                        )
                 except asyncio.CancelledError:
                     pass
                 self._task = None
