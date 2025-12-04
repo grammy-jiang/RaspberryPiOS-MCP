@@ -206,7 +206,7 @@ def _get_throttling_flags() -> dict[str, bool]:
                 flags["freq_capped"] = bool(throttle_bits & 0x2)
                 flags["throttled"] = bool(throttle_bits & 0x4)
     except (FileNotFoundError, subprocess.TimeoutExpired, ValueError, OSError):
-        pass
+        # Expected on non-Raspberry Pi systems or if vcgencmd is unavailable; return default flags.
 
     return flags
 
