@@ -135,18 +135,26 @@ def atomic_symlink_switch(
         link_target = str(target)
 
     # Create temp symlink in the same directory (for atomic rename)
-    temp_fd, temp_path = tempfile.mkstemp(
-        prefix=".symlink_tmp_",
-        dir=symlink_path.parent,
-    )
-    os.close(temp_fd)
-    # Remove temp file so we can create symlink
-    os.unlink(temp_path)
+    # Generate a unique temp symlink path and create the symlink directly
+    for attempt in range(10):
+        temp_name = f".symlink_tmp_{next(tempfile._get_candidate_names())}"
+        temp_path = symlink_path.parent / temp_name
+        if not temp_path.exists():
+            try:
+                os.symlink(link_target, temp_path)
+                break
+            except FileExistsError:
+                continue
+    else:
+        raise InternalError(
+            "Failed to create a unique temporary symlink path after 10 attempts",
+            details={
+                "symlink": str(symlink_path),
+                "target": str(target),
+            },
+        )
 
     try:
-        # Create temporary symlink
-        os.symlink(link_target, temp_path)
-
         # Atomic rename (this is the key operation)
         os.rename(temp_path, symlink_path)
 
