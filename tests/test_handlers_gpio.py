@@ -8,12 +8,14 @@ This test module validates the GPIO handlers in the privileged agent:
 - gpio.pwm: Set PWM output on a GPIO pin
 - gpio.get_all_states: Get state of all configured pins
 
-These tests use mocked gpiozero to avoid hardware dependencies.
+These tests use gpiozero's mock pin factory to avoid hardware dependencies.
 """
 
 from __future__ import annotations
 
 import pytest
+from gpiozero import Device
+from gpiozero.pins.mock import MockFactory
 
 from mcp_raspi.ipc.protocol import IPCRequest
 from mcp_raspi_ops.handlers.gpio import (
@@ -29,6 +31,16 @@ from mcp_raspi_ops.handlers_core import HandlerError, HandlerRegistry
 # =============================================================================
 # Test Fixtures
 # =============================================================================
+
+
+@pytest.fixture(autouse=True)
+def mock_gpio_factory():
+    """Use mock pin factory with PWM support for all GPIO tests."""
+    from gpiozero.pins.mock import MockPWMPin
+    Device.pin_factory = MockFactory(pin_class=MockPWMPin)
+    yield
+    Device.pin_factory.reset()
+    Device.pin_factory = None
 
 
 @pytest.fixture

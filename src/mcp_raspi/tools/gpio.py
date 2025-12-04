@@ -874,7 +874,7 @@ async def handle_gpio_set_pwm(
 @require_role("operator")
 async def handle_gpio_get_all_states(
     ctx: ToolContext,
-    params: dict[str, Any],
+    _params: dict[str, Any],
     *,
     config: AppConfig | None = None,
     ipc_client: Any | None = None,

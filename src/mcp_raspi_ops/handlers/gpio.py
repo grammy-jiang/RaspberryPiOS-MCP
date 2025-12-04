@@ -18,20 +18,13 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+from gpiozero import LED, InputDevice, OutputDevice, PWMOutputDevice
+
 from mcp_raspi.ipc.protocol import IPCRequest
 from mcp_raspi.logging import get_logger
 from mcp_raspi_ops.handlers_core import HandlerError, HandlerRegistry
 
 logger = get_logger(__name__)
-
-# Try to import gpiozero for actual hardware access
-try:
-    from gpiozero import LED, InputDevice, OutputDevice, PWMOutputDevice
-
-    GPIOZERO_AVAILABLE = True
-except ImportError:  # pragma: no cover
-    GPIOZERO_AVAILABLE = False
-    logger.warning("gpiozero not available - GPIO operations will be mocked")
 
 
 # Global pin tracking for state management
@@ -145,15 +138,6 @@ async def handle_gpio_read(request: IPCRequest) -> dict[str, Any]:
         },
     )
 
-    if not GPIOZERO_AVAILABLE:
-        # Mock mode - return simulated low state
-        logger.info(f"GPIO read (mocked): pin={pin}")
-        return {
-            "pin": pin,
-            "value": "low",
-            "mocked": True,
-        }
-
     # Get configured device
     device = _get_pin_device(pin)
     if device is None:
@@ -234,16 +218,6 @@ async def handle_gpio_write(request: IPCRequest) -> dict[str, Any]:
             "caller_user_id": caller.get("user_id"),
         },
     )
-
-    if not GPIOZERO_AVAILABLE:
-        # Mock mode
-        logger.info(f"GPIO write (mocked): pin={pin}, value={value}")
-        return {
-            "pin": pin,
-            "value": value,
-            "duration_ms": duration_ms,
-            "mocked": True,
-        }
 
     # Get or create output device
     device = _get_pin_device(pin)
@@ -351,34 +325,21 @@ async def handle_gpio_configure(request: IPCRequest) -> dict[str, Any]:
         },
     )
 
-    if not GPIOZERO_AVAILABLE:
-        # Mock mode
-        logger.info(f"GPIO configure (mocked): pin={pin}, mode={mode}, pull={pull}")
-        return {
-            "pin": pin,
-            "mode": mode,
-            "pull": pull,
-            "value": "low" if mode == "output" else None,
-            "mocked": True,
-        }
-
     # Clean up existing configuration
     _cleanup_pin(pin)
 
     try:
         if mode == "input":
-            # Map pull setting
-            pull_up = pull == "up"
-            pull_down = pull == "down"
-
-            if pull_up:
+            # Map pull setting to gpiozero parameters
+            if pull == "up":
                 device = InputDevice(pin, pull_up=True)
-            elif pull_down:
-                # gpiozero doesn't directly support pull_down for InputDevice
-                # Use active_state to handle inverted logic
+            elif pull == "down":
+                # Use pull_up=False to emulate pull_down behavior
                 device = InputDevice(pin, pull_up=False)
             else:
-                device = InputDevice(pin, pull_up=None)
+                # No pull specified - use pull_up=False as default
+                # This is the most portable option across pin factories
+                device = InputDevice(pin, pull_up=False)
 
             _configured_pins[pin] = device
             current_value = "high" if device.value else "low"
@@ -501,18 +462,6 @@ async def handle_gpio_pwm(request: IPCRequest) -> dict[str, Any]:
         },
     )
 
-    if not GPIOZERO_AVAILABLE:
-        # Mock mode
-        logger.info(
-            f"GPIO PWM (mocked): pin={pin}, freq={frequency_hz}Hz, duty={duty_cycle_percent}%"
-        )
-        return {
-            "pin": pin,
-            "frequency_hz": frequency_hz,
-            "duty_cycle_percent": duty_cycle_percent,
-            "mocked": True,
-        }
-
     # Clean up any existing non-PWM configuration
     if pin in _configured_pins:
         _cleanup_pin(pin)
@@ -586,19 +535,6 @@ async def handle_gpio_get_all_states(request: IPCRequest) -> dict[str, Any]:
     )
 
     pin_states = []
-
-    if not GPIOZERO_AVAILABLE:
-        # Mock mode
-        logger.info(f"GPIO get_all_states (mocked): pins={pins}")
-        for pin in pins:
-            pin_states.append({
-                "pin": pin,
-                "mode": "input",
-                "value": "low",
-                "allowed": True,
-                "mocked": True,
-            })
-        return {"pins": pin_states}
 
     for pin in pins:
         try:

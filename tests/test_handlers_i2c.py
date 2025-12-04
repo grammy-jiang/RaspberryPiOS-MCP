@@ -11,6 +11,8 @@ These tests use mocked smbus2 to avoid hardware dependencies.
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from mcp_raspi.ipc.protocol import IPCRequest
@@ -21,6 +23,34 @@ from mcp_raspi_ops.handlers.i2c import (
     register_i2c_handlers,
 )
 from mcp_raspi_ops.handlers_core import HandlerError, HandlerRegistry
+
+# =============================================================================
+# Test Fixtures
+# =============================================================================
+
+
+@pytest.fixture(autouse=True)
+def mock_smbus():
+    """Mock smbus2.SMBus for all tests."""
+    mock_bus = MagicMock()
+    # Simulate devices at addresses 0x76 and 0x77 (common sensors)
+    def mock_read_byte(addr):
+        if addr in (0x76, 0x77):
+            return 0x00
+        raise OSError("No device at address")
+
+    mock_bus.read_byte = mock_read_byte
+    mock_bus.read_byte_data = MagicMock(return_value=0x42)
+    mock_bus.read_i2c_block_data = MagicMock(return_value=[0x01, 0x02, 0x03, 0x04])
+    mock_bus.write_byte = MagicMock()
+    mock_bus.write_byte_data = MagicMock()
+    mock_bus.write_i2c_block_data = MagicMock()
+
+    with patch("mcp_raspi_ops.handlers.i2c.smbus2.SMBus") as mock_smbus_class:
+        mock_smbus_class.return_value.__enter__ = MagicMock(return_value=mock_bus)
+        mock_smbus_class.return_value.__exit__ = MagicMock(return_value=None)
+        yield mock_bus
+
 
 # =============================================================================
 # Tests for i2c.scan Handler
@@ -40,6 +70,9 @@ class TestI2cScanHandler:
         result = await handle_i2c_scan(request)
         assert result["bus"] == 1
         assert isinstance(result["addresses"], list)
+        # Should find devices at 0x76 and 0x77
+        assert 0x76 in result["addresses"]
+        assert 0x77 in result["addresses"]
 
     @pytest.mark.asyncio
     async def test_scan_invalid_bus(self) -> None:

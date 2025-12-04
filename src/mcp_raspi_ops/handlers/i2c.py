@@ -15,20 +15,13 @@ from __future__ import annotations
 
 from typing import Any
 
+import smbus2
+
 from mcp_raspi.ipc.protocol import IPCRequest
 from mcp_raspi.logging import get_logger
 from mcp_raspi_ops.handlers_core import HandlerError, HandlerRegistry
 
 logger = get_logger(__name__)
-
-# Try to import smbus2 for actual hardware access
-try:
-    import smbus2
-
-    SMBUS2_AVAILABLE = True
-except ImportError:  # pragma: no cover
-    SMBUS2_AVAILABLE = False
-    logger.warning("smbus2 not available - I2C operations will be mocked")
 
 
 # =============================================================================
@@ -307,16 +300,6 @@ async def handle_i2c_scan(request: IPCRequest) -> dict[str, Any]:
         },
     )
 
-    if not SMBUS2_AVAILABLE:
-        # Mock mode - return common sensor addresses for bus 1
-        logger.info(f"I2C scan (mocked): bus={bus}")
-        mock_addresses = [0x76, 0x77] if bus == 1 else []
-        return {
-            "bus": bus,
-            "addresses": mock_addresses,
-            "mocked": True,
-        }
-
     detected_addresses = []
 
     try:
@@ -402,17 +385,6 @@ async def handle_i2c_read(request: IPCRequest) -> dict[str, Any]:
             "caller_user_id": caller.get("user_id"),
         },
     )
-
-    if not SMBUS2_AVAILABLE:
-        # Mock mode - return zeros
-        logger.info(f"I2C read (mocked): bus={bus}, addr={address:#04x}, len={length}")
-        return {
-            "bus": bus,
-            "address": address,
-            "register": register,
-            "data": [0x00] * length,
-            "mocked": True,
-        }
 
     try:
         with smbus2.SMBus(bus) as i2c_bus:
@@ -510,19 +482,6 @@ async def handle_i2c_write(request: IPCRequest) -> dict[str, Any]:
             "caller_user_id": caller.get("user_id"),
         },
     )
-
-    if not SMBUS2_AVAILABLE:
-        # Mock mode
-        logger.info(
-            f"I2C write (mocked): bus={bus}, addr={address:#04x}, len={len(data)}"
-        )
-        return {
-            "bus": bus,
-            "address": address,
-            "register": register,
-            "bytes_written": len(data),
-            "mocked": True,
-        }
 
     try:
         with smbus2.SMBus(bus) as i2c_bus:
