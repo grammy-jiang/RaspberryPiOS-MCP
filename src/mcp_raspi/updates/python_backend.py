@@ -446,7 +446,6 @@ class PythonPackageBackend(UpdateBackend):
                 "No installable package found in staging",
                 details={"staging_path": str(staging_path)},
             )
-
         package_file = staged_files[0]
 
         # Create a virtual environment or install to target
