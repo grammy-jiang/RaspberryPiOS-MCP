@@ -369,7 +369,7 @@ async def handle_gpio_configure(request: IPCRequest) -> dict[str, Any]:
         if mode == "input":
             # Map pull setting
             pull_up = pull == "up"
-            pull_down = pull == "down" if not pull_up else False
+            pull_down = pull == "down"
 
             if pull_up:
                 device = InputDevice(pin, pull_up=True)

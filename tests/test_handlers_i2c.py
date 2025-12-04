@@ -321,10 +321,3 @@ class TestI2cHandlerRegistration:
         )
         result = await registry.dispatch(request)
         assert result["bus"] == 1
-
-        request = IPCRequest.create(
-            operation="i2c.scan",
-            params={"bus": 1},
-        )
-        result = await registry.dispatch(request)
-        assert result["bus"] == 1

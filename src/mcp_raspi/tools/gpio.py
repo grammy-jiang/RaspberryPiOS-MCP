@@ -23,7 +23,7 @@ from mcp_raspi.errors import (
 )
 from mcp_raspi.logging import get_logger
 from mcp_raspi.security.audit_logger import get_audit_logger
-from mcp_raspi.security.rbac import require_role
+from mcp_raspi.security.rbac import PermissionDeniedError, require_role
 
 if TYPE_CHECKING:
     from mcp_raspi.config import AppConfig
@@ -76,8 +76,6 @@ def _validate_pin_in_whitelist(
         PermissionDeniedError: If pin is not in whitelist.
     """
     if pin not in allowed_pins:
-        from mcp_raspi.security.rbac import PermissionDeniedError
-
         raise PermissionDeniedError(
             f"Pin {pin} is not in the allowed GPIO pin whitelist",
             details={
