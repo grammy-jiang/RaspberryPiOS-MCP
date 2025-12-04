@@ -90,6 +90,63 @@ class RoleMappingsConfig(BaseModel):
     )
 
 
+class LocalAuthConfig(BaseModel):
+    """Local authentication configuration for dev/testing.
+
+    Attributes:
+        static_token: Optional static token for local authentication.
+        permissive_mode: If True, allows all requests without authentication.
+        default_role: Default role assigned in permissive mode.
+    """
+
+    static_token: str | None = Field(
+        default=None,
+        description="Static token for local authentication (dev/testing only)",
+    )
+    permissive_mode: bool = Field(
+        default=False,
+        description="Allow all requests without authentication (dev only)",
+    )
+    default_role: str = Field(
+        default="admin",
+        description="Default role assigned in permissive mode",
+    )
+    default_user_id: str = Field(
+        default="local-dev-user",
+        description="Default user ID in permissive mode",
+    )
+
+
+class CloudflareAuthConfig(BaseModel):
+    """Cloudflare Access authentication configuration.
+
+    Attributes:
+        jwks_url: URL to fetch Cloudflare Access JWKS.
+        audience: Expected audience claim in the JWT.
+        issuer: Expected issuer claim in the JWT (Cloudflare team domain).
+        jwks_cache_ttl_seconds: How long to cache JWKS before refresh.
+    """
+
+    jwks_url: str = Field(
+        default="",
+        description="URL to fetch Cloudflare Access JWKS public keys",
+    )
+    audience: str = Field(
+        default="",
+        description="Expected audience (aud) claim in JWT",
+    )
+    issuer: str = Field(
+        default="",
+        description="Expected issuer (iss) claim in JWT (e.g., https://<team>.cloudflareaccess.com)",
+    )
+    jwks_cache_ttl_seconds: int = Field(
+        default=3600,
+        description="JWKS cache TTL in seconds",
+        ge=60,
+        le=86400,
+    )
+
+
 class SecurityConfig(BaseModel):
     """Security and authentication configuration.
 
@@ -97,6 +154,8 @@ class SecurityConfig(BaseModel):
         mode: Authentication mode ('cloudflare' or 'local').
         roles: Role definitions with allowed safety levels.
         role_mappings: Mapping from external identity to internal roles.
+        local_auth: Local authentication settings.
+        cloudflare_auth: Cloudflare Access authentication settings.
     """
 
     mode: str = Field(
@@ -114,6 +173,14 @@ class SecurityConfig(BaseModel):
     role_mappings: RoleMappingsConfig = Field(
         default_factory=RoleMappingsConfig,
         description="External identity to role mappings",
+    )
+    local_auth: LocalAuthConfig = Field(
+        default_factory=LocalAuthConfig,
+        description="Local authentication settings for dev/testing",
+    )
+    cloudflare_auth: CloudflareAuthConfig = Field(
+        default_factory=CloudflareAuthConfig,
+        description="Cloudflare Access authentication settings",
     )
 
     @field_validator("mode")

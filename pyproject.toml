@@ -22,6 +22,8 @@ keywords = ["raspberry-pi", "mcp", "iot", "device-management"]
 dependencies = [
     "pydantic>=2.0.0",
     "pyyaml>=6.0",
+    "pyjwt[crypto]>=2.10.0",
+    "httpx>=0.28.0",
 ]
 
 [project.optional-dependencies]
