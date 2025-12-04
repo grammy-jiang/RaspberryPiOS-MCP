@@ -14,10 +14,10 @@ import os
 import pytest
 
 from mcp_raspi.ipc.protocol import IPCRequest
+from mcp_raspi.process_utils import process_matches_filter
 from mcp_raspi_ops.handlers.process import (
     _get_detailed_process_info,
     _get_process_info,
-    _process_matches_filter,
     handle_process_get_info,
     handle_process_list_processes,
     register_process_handlers,
@@ -41,7 +41,7 @@ class TestProcessFilter:
             "memory_rss": 100 * 1024 * 1024,
             "status": "running",
         }
-        assert _process_matches_filter(proc, None, None, None, None, None)
+        assert process_matches_filter(proc, None, None, None, None, None)
 
     def test_name_pattern_filter(self) -> None:
         """Test name pattern filtering."""
@@ -52,8 +52,8 @@ class TestProcessFilter:
             "memory_rss": 0,
             "status": "running",
         }
-        assert _process_matches_filter(proc, "python*", None, None, None, None)
-        assert not _process_matches_filter(proc, "java*", None, None, None, None)
+        assert process_matches_filter(proc, "python*", None, None, None, None)
+        assert not process_matches_filter(proc, "java*", None, None, None, None)
 
     def test_username_filter(self) -> None:
         """Test username filtering."""
@@ -64,8 +64,8 @@ class TestProcessFilter:
             "memory_rss": 0,
             "status": "running",
         }
-        assert _process_matches_filter(proc, None, "admin", None, None, None)
-        assert not _process_matches_filter(proc, None, "user", None, None, None)
+        assert process_matches_filter(proc, None, "admin", None, None, None)
+        assert not process_matches_filter(proc, None, "user", None, None, None)
 
     def test_cpu_percent_filter(self) -> None:
         """Test CPU percentage filtering."""
@@ -76,8 +76,8 @@ class TestProcessFilter:
             "memory_rss": 0,
             "status": "running",
         }
-        assert _process_matches_filter(proc, None, None, 5.0, None, None)
-        assert not _process_matches_filter(proc, None, None, 15.0, None, None)
+        assert process_matches_filter(proc, None, None, 5.0, None, None)
+        assert not process_matches_filter(proc, None, None, 15.0, None, None)
 
     def test_memory_filter(self) -> None:
         """Test memory MB filtering."""
@@ -88,8 +88,8 @@ class TestProcessFilter:
             "memory_rss": 100 * 1024 * 1024,
             "status": "running",
         }
-        assert _process_matches_filter(proc, None, None, None, 50, None)
-        assert not _process_matches_filter(proc, None, None, None, 150, None)
+        assert process_matches_filter(proc, None, None, None, 50, None)
+        assert not process_matches_filter(proc, None, None, None, 150, None)
 
     def test_status_filter(self) -> None:
         """Test status filtering."""
@@ -100,8 +100,8 @@ class TestProcessFilter:
             "memory_rss": 0,
             "status": "running",
         }
-        assert _process_matches_filter(proc, None, None, None, None, ["running", "sleeping"])
-        assert not _process_matches_filter(proc, None, None, None, None, ["sleeping"])
+        assert process_matches_filter(proc, None, None, None, None, ["running", "sleeping"])
+        assert not process_matches_filter(proc, None, None, None, None, ["sleeping"])
 
 
 class TestProcessInfo:

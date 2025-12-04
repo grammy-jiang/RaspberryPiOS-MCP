@@ -16,12 +16,14 @@ from __future__ import annotations
 
 import asyncio
 import fnmatch
+import re
 import subprocess
 from datetime import UTC, datetime
 from typing import Any
 
 from mcp_raspi.ipc.protocol import IPCRequest
 from mcp_raspi.logging import get_logger
+from mcp_raspi.service_utils import is_service_allowed
 from mcp_raspi_ops.handlers_core import HandlerError, HandlerRegistry
 
 logger = get_logger(__name__)
@@ -33,13 +35,15 @@ ALLOWED_ACTIONS = {"start", "stop", "restart", "reload"}
 SYSTEMCTL_TIMEOUT = 30
 
 
-from mcp_raspi.service_utils import is_service_allowed
 def _run_systemctl(
     args: list[str],
     timeout: int = SYSTEMCTL_TIMEOUT,
 ) -> subprocess.CompletedProcess[str]:
     """
     Run a systemctl command safely.
+
+    Note: Callers must check the returncode field of the result.
+    Non-zero return codes are not automatically raised as exceptions.
 
     Args:
         args: Arguments to pass to systemctl.
@@ -78,6 +82,14 @@ def _run_systemctl(
         ) from e
 
 
+# Regex patterns for parsing systemctl status output
+# Pattern for Active line: "Active: <state> (<sub_state>) since..."
+ACTIVE_LINE_PATTERN = re.compile(
+    r"^Active:\s*(\w+)\s*\((\w+)\)",
+    re.IGNORECASE,
+)
+
+
 def _parse_service_status_output(output: str) -> dict[str, Any]:
     """
     Parse systemctl status output into a structured dict.
@@ -109,28 +121,28 @@ def _parse_service_status_output(output: str) -> dict[str, Any]:
                 result["loaded"] = False
 
         elif line.startswith("Active:"):
-            # Parse active state
-            if "active (running)" in line.lower():
-                result["status"] = "active"
-                result["sub_status"] = "running"
-            elif "active (exited)" in line.lower():
-                result["status"] = "active"
-                result["sub_status"] = "exited"
-            elif "inactive (dead)" in line.lower():
-                result["status"] = "inactive"
-                result["sub_status"] = "dead"
-            elif "failed" in line.lower():
-                result["status"] = "failed"
-                result["sub_status"] = "failed"
-            elif "activating" in line.lower():
-                result["status"] = "activating"
-                result["sub_status"] = "waiting"
-            elif "deactivating" in line.lower():
-                result["status"] = "deactivating"
-                result["sub_status"] = "waiting"
+            # Parse active state using regex for more robust matching
+            match = ACTIVE_LINE_PATTERN.match(line)
+            if match:
+                state = match.group(1).lower()
+                sub_state = match.group(2).lower()
+                result["status"] = state
+                result["sub_status"] = sub_state
             else:
-                result["status"] = "unknown"
-                result["sub_status"] = "unknown"
+                # Fallback for lines without the standard format (e.g., "failed")
+                line_lower = line.lower()
+                if "failed" in line_lower:
+                    result["status"] = "failed"
+                    result["sub_status"] = "failed"
+                elif "activating" in line_lower:
+                    result["status"] = "activating"
+                    result["sub_status"] = "waiting"
+                elif "deactivating" in line_lower:
+                    result["status"] = "deactivating"
+                    result["sub_status"] = "waiting"
+                else:
+                    result["status"] = "unknown"
+                    result["sub_status"] = "unknown"
 
             # Note: Timestamp parsing is complex and not critical for status display
             # The "since" field contains various date formats that aren't easily parsed
@@ -238,7 +250,7 @@ async def handle_service_list_services(request: IPCRequest) -> dict[str, Any]:
             continue
 
         # Apply whitelist filter
-        if allowed_services and not _is_service_allowed(service_name, allowed_services):
+        if allowed_services and not is_service_allowed(service_name, allowed_services):
             continue
 
         # Parse service info

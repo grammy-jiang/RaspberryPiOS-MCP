@@ -14,8 +14,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_raspi.ipc.protocol import IPCRequest
+from mcp_raspi.service_utils import is_service_allowed
 from mcp_raspi_ops.handlers.service import (
-    _is_service_allowed,
     _parse_service_status_output,
     handle_service_control_service,
     handle_service_get_status,
@@ -35,17 +35,17 @@ class TestWhitelistValidation:
 
     def test_exact_match(self) -> None:
         """Test exact service name match."""
-        assert _is_service_allowed("nginx", ["nginx", "docker"])
-        assert _is_service_allowed("nginx.service", ["nginx", "docker"])
+        assert is_service_allowed("nginx", ["nginx", "docker"])
+        assert is_service_allowed("nginx.service", ["nginx", "docker"])
 
     def test_wildcard_match(self) -> None:
         """Test wildcard pattern matching."""
-        assert _is_service_allowed("mcp-raspi-server", ["mcp-raspi-*"])
-        assert not _is_service_allowed("nginx", ["mcp-raspi-*"])
+        assert is_service_allowed("mcp-raspi-server", ["mcp-raspi-*"])
+        assert not is_service_allowed("nginx", ["mcp-raspi-*"])
 
     def test_empty_whitelist(self) -> None:
         """Test empty whitelist denies all."""
-        assert not _is_service_allowed("nginx", [])
+        assert not is_service_allowed("nginx", [])
 
 
 class TestStatusParsing:

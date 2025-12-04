@@ -18,9 +18,9 @@ import pytest
 from mcp_raspi.config import AppConfig, ProcessToolsConfig, TestingConfig, ToolsConfig
 from mcp_raspi.context import CallerInfo, ToolContext
 from mcp_raspi.errors import InvalidArgumentError
+from mcp_raspi.process_utils import process_matches_filter
 from mcp_raspi.tools.process import (
     _is_pid_protected,
-    _process_matches_filter,
     _validate_pagination,
     _validate_pid,
     handle_process_get_info,
@@ -140,45 +140,45 @@ class TestProcessFilter:
     def test_no_filter_matches_all(self) -> None:
         """Test no filters matches all processes."""
         proc = {"name": "python", "username": "user", "cpu_percent": 5.0, "memory_rss": 100 * 1024 * 1024, "status": "running"}
-        assert _process_matches_filter(proc, None, None, None, None, None)
+        assert process_matches_filter(proc, None, None, None, None, None)
 
     def test_name_pattern_filter(self) -> None:
         """Test name pattern filtering."""
         proc = {"name": "python3", "username": "user", "cpu_percent": 0.0, "memory_rss": 0, "status": "running"}
-        assert _process_matches_filter(proc, "python*", None, None, None, None)
-        assert not _process_matches_filter(proc, "java*", None, None, None, None)
+        assert process_matches_filter(proc, "python*", None, None, None, None)
+        assert not process_matches_filter(proc, "java*", None, None, None, None)
 
     def test_username_filter(self) -> None:
         """Test username filtering."""
         proc = {"name": "python", "username": "admin", "cpu_percent": 0.0, "memory_rss": 0, "status": "running"}
-        assert _process_matches_filter(proc, None, "admin", None, None, None)
-        assert not _process_matches_filter(proc, None, "user", None, None, None)
+        assert process_matches_filter(proc, None, "admin", None, None, None)
+        assert not process_matches_filter(proc, None, "user", None, None, None)
 
     def test_cpu_percent_filter(self) -> None:
         """Test CPU percentage filtering."""
         proc = {"name": "python", "username": "user", "cpu_percent": 10.0, "memory_rss": 0, "status": "running"}
-        assert _process_matches_filter(proc, None, None, 5.0, None, None)
-        assert not _process_matches_filter(proc, None, None, 15.0, None, None)
+        assert process_matches_filter(proc, None, None, 5.0, None, None)
+        assert not process_matches_filter(proc, None, None, 15.0, None, None)
 
     def test_memory_mb_filter(self) -> None:
         """Test memory MB filtering."""
         proc = {"name": "python", "username": "user", "cpu_percent": 0.0, "memory_rss": 100 * 1024 * 1024, "status": "running"}
-        assert _process_matches_filter(proc, None, None, None, 50, None)
-        assert not _process_matches_filter(proc, None, None, None, 150, None)
+        assert process_matches_filter(proc, None, None, None, 50, None)
+        assert not process_matches_filter(proc, None, None, None, 150, None)
 
     def test_status_filter(self) -> None:
         """Test status filtering."""
         proc = {"name": "python", "username": "user", "cpu_percent": 0.0, "memory_rss": 0, "status": "running"}
-        assert _process_matches_filter(proc, None, None, None, None, ["running", "sleeping"])
-        assert not _process_matches_filter(proc, None, None, None, None, ["sleeping"])
+        assert process_matches_filter(proc, None, None, None, None, ["running", "sleeping"])
+        assert not process_matches_filter(proc, None, None, None, None, ["sleeping"])
 
     def test_combined_filters(self) -> None:
         """Test multiple filters combined."""
         proc = {"name": "python3", "username": "admin", "cpu_percent": 10.0, "memory_rss": 100 * 1024 * 1024, "status": "running"}
         # All filters match
-        assert _process_matches_filter(proc, "python*", "admin", 5.0, 50, ["running"])
+        assert process_matches_filter(proc, "python*", "admin", 5.0, 50, ["running"])
         # One filter doesn't match
-        assert not _process_matches_filter(proc, "python*", "user", 5.0, 50, ["running"])
+        assert not process_matches_filter(proc, "python*", "user", 5.0, 50, ["running"])
 
 
 # =============================================================================

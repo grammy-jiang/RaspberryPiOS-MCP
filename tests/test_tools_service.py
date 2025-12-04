@@ -22,8 +22,8 @@ from mcp_raspi.errors import (
     PermissionDeniedError,
     UnavailableError,
 )
+from mcp_raspi.service_utils import is_service_allowed
 from mcp_raspi.tools.service import (
-    _is_service_allowed,
     _validate_action,
     _validate_pagination,
     _validate_service_name,
@@ -135,28 +135,28 @@ class TestWhitelistValidation:
 
     def test_exact_match(self) -> None:
         """Test exact service name match."""
-        assert _is_service_allowed("nginx", ["nginx", "docker"])
-        assert _is_service_allowed("nginx.service", ["nginx", "docker"])
+        assert is_service_allowed("nginx", ["nginx", "docker"])
+        assert is_service_allowed("nginx.service", ["nginx", "docker"])
 
     def test_wildcard_match(self) -> None:
         """Test wildcard pattern matching."""
-        assert _is_service_allowed("mcp-raspi-server", ["mcp-raspi-*"])
-        assert _is_service_allowed("mcp-raspi-ops", ["mcp-raspi-*"])
-        assert not _is_service_allowed("nginx", ["mcp-raspi-*"])
+        assert is_service_allowed("mcp-raspi-server", ["mcp-raspi-*"])
+        assert is_service_allowed("mcp-raspi-ops", ["mcp-raspi-*"])
+        assert not is_service_allowed("nginx", ["mcp-raspi-*"])
 
     def test_empty_whitelist_denies_all(self) -> None:
         """Test empty whitelist denies all services."""
-        assert not _is_service_allowed("nginx", [])
-        assert not _is_service_allowed("docker", [])
+        assert not is_service_allowed("nginx", [])
+        assert not is_service_allowed("docker", [])
 
     def test_service_suffix_normalization(self) -> None:
         """Test .service suffix normalization."""
-        assert _is_service_allowed("nginx", ["nginx.service"])
-        assert _is_service_allowed("nginx.service", ["nginx"])
+        assert is_service_allowed("nginx", ["nginx.service"])
+        assert is_service_allowed("nginx.service", ["nginx"])
 
     def test_case_sensitivity(self) -> None:
         """Test case-sensitive matching (systemd is case-sensitive)."""
-        assert not _is_service_allowed("NGINX", ["nginx"])
+        assert not is_service_allowed("NGINX", ["nginx"])
 
 
 class TestValidation:
@@ -284,7 +284,7 @@ class TestServiceListServices:
         # All returned services should match whitelist patterns
         for service in result["services"]:
             service_name = service["name"]
-            assert _is_service_allowed(
+            assert is_service_allowed(
                 service_name, full_sandbox_config.tools.service.allowed_services
             ), f"Service {service_name} should be in whitelist"
 

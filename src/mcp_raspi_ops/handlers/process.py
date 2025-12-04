@@ -12,7 +12,6 @@ Design follows Doc 07 §4.1 (Process Management).
 
 from __future__ import annotations
 
-import fnmatch
 from datetime import UTC, datetime
 from typing import Any
 
@@ -20,6 +19,7 @@ import psutil
 
 from mcp_raspi.ipc.protocol import IPCRequest
 from mcp_raspi.logging import get_logger
+from mcp_raspi.process_utils import process_matches_filter
 from mcp_raspi_ops.handlers_core import HandlerError, HandlerRegistry
 
 logger = get_logger(__name__)
@@ -194,57 +194,6 @@ def _get_detailed_process_info(proc: psutil.Process) -> dict[str, Any] | None:
         return None
 
 
-def _process_matches_filter(
-    proc_info: dict[str, Any],
-    name_pattern: str | None,
-    username: str | None,
-    min_cpu_percent: float | None,
-    min_memory_mb: float | None,
-    status_filter: list[str] | None,
-) -> bool:
-    """
-    Check if a process matches the given filters.
-
-    Args:
-        proc_info: Process information dictionary.
-        name_pattern: Optional name pattern filter (supports wildcards).
-        username: Optional username filter.
-        min_cpu_percent: Minimum CPU usage percentage.
-        min_memory_mb: Minimum memory usage in MB.
-        status_filter: List of allowed status values.
-
-    Returns:
-        True if process matches all filters.
-    """
-    if name_pattern:
-        name = proc_info.get("name", "")
-        if not fnmatch.fnmatch(name.lower(), name_pattern.lower()):
-            return False
-
-    if username:
-        proc_user = proc_info.get("username", "")
-        if proc_user.lower() != username.lower():
-            return False
-
-    if min_cpu_percent is not None:
-        cpu = proc_info.get("cpu_percent", 0.0)
-        if cpu < min_cpu_percent:
-            return False
-
-    if min_memory_mb is not None:
-        memory_bytes = proc_info.get("memory_rss", 0)
-        memory_mb = memory_bytes / (1024 * 1024)
-        if memory_mb < min_memory_mb:
-            return False
-
-    if status_filter:
-        status = proc_info.get("status", "")
-        if status.lower() not in [s.lower() for s in status_filter]:
-            return False
-
-    return True
-
-
 async def handle_process_list_processes(request: IPCRequest) -> dict[str, Any]:
     """
     Handle the process.list_processes operation.
@@ -304,7 +253,7 @@ async def handle_process_list_processes(request: IPCRequest) -> dict[str, Any]:
         if proc_info is None:
             continue
 
-        if _process_matches_filter(
+        if process_matches_filter(
             proc_info,
             name_pattern,
             username,

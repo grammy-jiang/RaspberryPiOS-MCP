@@ -25,6 +25,7 @@ from mcp_raspi.errors import (
 from mcp_raspi.logging import get_logger
 from mcp_raspi.security.audit_logger import get_audit_logger
 from mcp_raspi.security.rbac import require_role
+from mcp_raspi.service_utils import is_service_allowed
 
 if TYPE_CHECKING:
     from mcp_raspi.config import AppConfig
@@ -36,46 +37,6 @@ VALID_ACTIONS = {"start", "stop", "restart", "reload"}
 
 # Valid service states for filtering
 VALID_STATES = {"active", "inactive", "failed", "activating", "deactivating"}
-
-
-def _is_service_allowed(
-    service_name: str,
-    allowed_services: list[str],
-) -> bool:
-    """
-    Check if a service is allowed by the whitelist.
-
-    Args:
-        service_name: The service name to check.
-        allowed_services: List of allowed service names/patterns.
-
-    Returns:
-        True if service is allowed, False otherwise.
-    """
-    if not allowed_services:
-        # If no whitelist configured, deny all service operations
-        return False
-
-    # Normalize service name (add .service suffix if missing)
-    if not service_name.endswith(".service"):
-        normalized_name = f"{service_name}.service"
-    else:
-        normalized_name = service_name
-
-    # Check against whitelist patterns
-    for pattern in allowed_services:
-        # Normalize pattern as well
-        if not pattern.endswith(".service") and not pattern.endswith("*"):
-            pattern = f"{pattern}.service"
-
-        # Use fnmatch for pattern matching (supports * and ?)
-        if fnmatch.fnmatch(normalized_name, pattern):
-            return True
-        # Also check without .service suffix for flexibility
-        if fnmatch.fnmatch(service_name, pattern):
-            return True
-
-    return False
 
 
 def _validate_service_name(service_name: str | None) -> str:
@@ -364,7 +325,7 @@ def _get_mock_services(
 
     # Filter by whitelist - always apply (empty whitelist = nothing allowed)
     mock_data = [
-        s for s in mock_data if _is_service_allowed(s["name"], allowed_services)
+        s for s in mock_data if is_service_allowed(s["name"], allowed_services)
     ]
 
     # Filter by state
@@ -419,7 +380,7 @@ async def handle_service_get_status(
         sandbox_mode = config.testing.sandbox_mode
 
     # Check whitelist (viewers can still get status of whitelisted services)
-    if allowed_services and not _is_service_allowed(service_name, allowed_services):
+    if allowed_services and not is_service_allowed(service_name, allowed_services):
         raise PermissionDeniedError(
             f"Service '{service_name}' is not in the allowed services list",
             details={"service_name": service_name, "allowed_services": allowed_services},
@@ -539,7 +500,7 @@ async def handle_service_control_service(
         sandbox_mode = config.testing.sandbox_mode
 
     # Enforce whitelist for control operations
-    if not _is_service_allowed(service_name, allowed_services):
+    if not is_service_allowed(service_name, allowed_services):
         logger.warning(
             "Service control denied - not in whitelist",
             extra={
@@ -709,7 +670,7 @@ async def handle_service_set_enabled(
         sandbox_mode = config.testing.sandbox_mode
 
     # Enforce whitelist
-    if not _is_service_allowed(service_name, allowed_services):
+    if not is_service_allowed(service_name, allowed_services):
         logger.warning(
             "Service set_enabled denied - not in whitelist",
             extra={
