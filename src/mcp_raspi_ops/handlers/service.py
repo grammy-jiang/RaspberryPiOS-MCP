@@ -163,10 +163,8 @@ def _parse_service_status_output(output: str) -> dict[str, Any]:
                 result["status"] = "unknown"
                 result["sub_status"] = "unknown"
 
-            # Extract timestamp
-            if "since" in line.lower():
-                # Try to extract the time part
-                pass  # Keep it simple for now
+            # Note: Timestamp parsing is complex and not critical for status display
+            # The "since" field contains various date formats that aren't easily parsed
 
         elif line.startswith("Main PID:"):
             # Parse main PID

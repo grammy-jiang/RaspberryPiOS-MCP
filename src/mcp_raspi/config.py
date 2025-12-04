@@ -286,6 +286,11 @@ class ServiceToolsConfig(ToolNamespaceConfig):
     )
 
 
+def _default_deny_pids() -> list[int]:
+    """Return default list of protected PIDs (PID 1 / systemd)."""
+    return [1]
+
+
 class ProcessToolsConfig(ToolNamespaceConfig):
     """Configuration for process tools namespace.
 
@@ -300,7 +305,7 @@ class ProcessToolsConfig(ToolNamespaceConfig):
         description="List of users whose processes can be managed",
     )
     deny_pids: list[int] = Field(
-        default_factory=lambda: [1],  # Always protect PID 1 (systemd)
+        default_factory=_default_deny_pids,
         description="List of PIDs that are always protected from management",
     )
 
