@@ -230,6 +230,26 @@ class UpdateStateMachine:
         """Set the version manager."""
         self._version_manager = value
 
+    @property
+    def releases_dir(self) -> Path:
+        """Get the releases directory path."""
+        return self._releases_dir
+
+    @releases_dir.setter
+    def releases_dir(self, value: Path | str) -> None:
+        """Set the releases directory path."""
+        self._releases_dir = Path(value)
+
+    @property
+    def current_symlink(self) -> Path:
+        """Get the current symlink path."""
+        return self._current_symlink
+
+    @current_symlink.setter
+    def current_symlink(self, value: Path | str) -> None:
+        """Set the current symlink path."""
+        self._current_symlink = Path(value)
+
     def add_progress_callback(
         self, callback: Callable[[UpdateStateData], None]
     ) -> None:
@@ -526,9 +546,19 @@ class UpdateStateMachine:
                 self._releases_dir, self._prepared_update.target_version
             )
             if version_dir is None:
-                # Create path if not returned
+                # Construct path if not returned by get_version_directory
                 version_dir = (
                     self._releases_dir / f"v{self._prepared_update.target_version}"
+                )
+
+            # Validate that the version directory exists before switching
+            if not version_dir.exists():
+                raise FailedPreconditionError(
+                    f"Version directory does not exist: {version_dir}",
+                    details={
+                        "version": self._prepared_update.target_version,
+                        "path": str(version_dir),
+                    },
                 )
 
             atomic_symlink_switch(version_dir, self._current_symlink)

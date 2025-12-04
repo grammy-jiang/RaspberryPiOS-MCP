@@ -281,7 +281,7 @@ class RollbackManager:
                     "target_version": target_version,
                     "available_versions": available,
                 },
-            )
+        )
 
         await perform_rollback(
             previous_version=target_version,
@@ -291,73 +291,3 @@ class RollbackManager:
         )
 
         return target_version
-
-
-def add_rollback_to_version_manager() -> None:
-    """
-    Add rollback recording capability to VersionManager.
-
-    This monkey-patches the VersionManager class to add a record_rollback method.
-    Called at module import time to extend VersionManager functionality.
-    """
-    from mcp_raspi.updates.version import VersionHistory, VersionManager
-
-    def record_rollback(
-        self: VersionManager,
-        target_version: str,
-        *,
-        save: bool = True,
-    ) -> None:
-        """
-        Record a rollback operation in version history.
-
-        Args:
-            target_version: Version that was rolled back to.
-            save: Whether to save changes to disk.
-        """
-        from datetime import UTC, datetime
-
-        if self._version_info is None:
-            # Create new version info
-            from mcp_raspi.updates.version import VersionInfo
-
-            self._version_info = VersionInfo(current=target_version)
-
-        old_version = self._version_info.current
-
-        # Create rollback history entry
-        from mcp_raspi.updates.version import parse_semantic_version
-
-        parse_semantic_version(target_version)  # Validate
-
-        entry = VersionHistory(
-            version=target_version,
-            installed_at=datetime.now(UTC).isoformat(),
-            source="rollback",
-            status="active",
-            updated_from=old_version,
-        )
-
-        # Update version info
-        self._version_info.current = target_version
-        self._version_info.history.insert(0, entry)
-
-        # Limit history
-        if len(self._version_info.history) > 10:
-            self._version_info.history = self._version_info.history[:10]
-
-        if save:
-            self.save()
-
-        logger.info(
-            f"Recorded rollback from {old_version} to {target_version}",
-            extra={"old_version": old_version, "target_version": target_version},
-        )
-
-    # Add method to VersionManager if not already present
-    if not hasattr(VersionManager, "record_rollback"):
-        VersionManager.record_rollback = record_rollback
-
-
-# Extend VersionManager at import time
-add_rollback_to_version_manager()

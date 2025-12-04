@@ -317,9 +317,9 @@ def _configure_state_machine(
     version_manager = VersionManager(version_file=version_file)
     state_machine.version_manager = version_manager
 
-    # Set paths
-    state_machine._releases_dir = Path(config.updates.releases_dir)
-    state_machine._current_symlink = Path(config.updates.releases_dir).parent / "current"
+    # Set paths using public setters
+    state_machine.releases_dir = Path(config.updates.releases_dir)
+    state_machine.current_symlink = Path(config.updates.releases_dir).parent / "current"
 
 
 def reset_update_state_machine() -> None:
