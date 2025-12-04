@@ -110,6 +110,14 @@ class AggregationResult:
 
 
 # =============================================================================
+# Constants
+# =============================================================================
+
+# Precision for aggregation average values (number of decimal places)
+AGGREGATION_PRECISION = 4
+
+
+# =============================================================================
 # SQLite Schema
 # =============================================================================
 
@@ -506,7 +514,11 @@ class MetricsStorage:
                     metric_type=metric_type,
                     min_value=row["min_value"],
                     max_value=row["max_value"],
-                    avg_value=round(row["avg_value"], 4) if row["avg_value"] else None,
+                    avg_value=(
+                        round(row["avg_value"], AGGREGATION_PRECISION)
+                        if row["avg_value"]
+                        else None
+                    ),
                     count=row["count"],
                     start_time=start_time,
                     end_time=end_time,
