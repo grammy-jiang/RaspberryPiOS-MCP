@@ -14,6 +14,7 @@ from time import time
 
 import pytest
 
+import mcp_raspi.tools.manage as manage_module
 from mcp_raspi.config import AppConfig
 from mcp_raspi.context import CallerInfo, ToolContext
 from mcp_raspi.tools.manage import (
@@ -68,8 +69,6 @@ class TestServerStartTime:
     def test_get_start_time_initializes_if_none(self) -> None:
         """Test that get_server_start_time initializes if not set."""
         # Reset the global
-        import mcp_raspi.tools.manage as manage_module
-
         manage_module._SERVER_START_TIME = None
 
         before = time()
