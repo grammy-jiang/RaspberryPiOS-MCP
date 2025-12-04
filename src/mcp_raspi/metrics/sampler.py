@@ -250,8 +250,9 @@ def collect_metrics(metrics_enabled: list[str]) -> list[MetricSample]:
                         metadata={"total_bytes": disk.total},
                     )
                 )
-        except OSError:
-            pass
+        except OSError as e:
+            # Disk usage metrics unavailable (e.g., permission error, missing mount); skipping sample.
+            logger.warning(f"Failed to sample disk usage metrics: {e!r}")
 
     # Temperature
     if METRIC_TEMPERATURE in metrics_enabled:
