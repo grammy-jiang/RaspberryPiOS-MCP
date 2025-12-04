@@ -345,7 +345,7 @@ async def run_agent(
 
     def signal_handler() -> None:
         logger.info("Received shutdown signal")
-        asyncio.create_task(agent.stop())
+        loop.create_task(agent.stop())
 
     try:
         import signal
