@@ -514,8 +514,8 @@ async def handle_metrics_get_realtime(
         disk = psutil.disk_usage("/")
         metrics[METRIC_DISK_PERCENT] = disk.percent
         metrics[METRIC_DISK_USED_BYTES] = disk.used
-    except OSError:
-        pass
+    except OSError as e:
+        logger.warning("Could not collect disk usage metrics: %s", e, exc_info=True)
 
     # Temperature
     temp = _get_cpu_temperature()
