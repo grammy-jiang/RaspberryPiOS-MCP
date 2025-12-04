@@ -186,7 +186,7 @@ def get_symlink_target(symlink_path: Path) -> Path | None:
     Returns:
         The resolved target path, or None if symlink doesn't exist.
     """
-    if not symlink_path.exists() and not symlink_path.is_symlink():
+    if not symlink_path.is_symlink():
         return None
 
     try:
