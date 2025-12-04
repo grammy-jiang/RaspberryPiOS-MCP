@@ -218,6 +218,29 @@ class TestExecutePowerCommand:
             assert result["method"] == "scheduled_shutdown"
 
     @pytest.mark.asyncio
+    async def test_sub_minute_delay_uses_asyncio_sleep(self) -> None:
+        """Test delays < 60 seconds use asyncio.sleep instead of shutdown command."""
+        with (
+            patch("subprocess.run") as mock_run,
+            patch("asyncio.sleep") as mock_sleep,
+        ):
+            mock_run.return_value = MagicMock(returncode=0, stderr="")
+
+            result = await _execute_power_command(
+                command=["systemctl", "reboot"],
+                delay_seconds=30,  # Sub-minute delay
+                operation="system.reboot",
+                reason="test",
+            )
+
+            assert result["executed"] is True
+            assert result["method"] == "direct_systemctl"
+            # Should have called asyncio.sleep with the delay
+            mock_sleep.assert_called_once_with(30)
+            # Only systemctl call at end, no shutdown scheduling
+            mock_run.assert_called_once()
+
+    @pytest.mark.asyncio
     async def test_scheduled_shutdown_fallback_on_failure(self) -> None:
         """Test scheduled shutdown falls back to direct command on failure."""
         call_count = [0]

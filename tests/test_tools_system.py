@@ -433,25 +433,56 @@ class TestSystemReboot:
         mock_client.call.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_delay_seconds_clamped(
+    async def test_delay_seconds_out_of_range_raises(
         self, admin_ctx: ToolContext, full_sandbox_config: AppConfig
     ) -> None:
-        """Test delay_seconds is clamped to valid range (0-600)."""
-        # Test max clamping
-        result = await handle_system_reboot(
-            admin_ctx,
-            {"delay_seconds": 9999},
-            config=full_sandbox_config,
-        )
-        assert result["effective_after_seconds"] == 600
+        """Test delay_seconds out of range raises InvalidArgumentError."""
+        from mcp_raspi.errors import InvalidArgumentError
 
-        # Test min clamping
+        # Test value too large
+        with pytest.raises(InvalidArgumentError) as exc_info:
+            await handle_system_reboot(
+                admin_ctx,
+                {"delay_seconds": 9999},
+                config=full_sandbox_config,
+            )
+        assert "delay_seconds must be between 0 and 600" in str(exc_info.value)
+
+        # Test negative value
+        with pytest.raises(InvalidArgumentError) as exc_info:
+            await handle_system_reboot(
+                admin_ctx,
+                {"delay_seconds": -100},
+                config=full_sandbox_config,
+            )
+        assert "delay_seconds must be between 0 and 600" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_delay_seconds_invalid_type_raises(
+        self, admin_ctx: ToolContext, full_sandbox_config: AppConfig
+    ) -> None:
+        """Test delay_seconds with invalid type raises InvalidArgumentError."""
+        from mcp_raspi.errors import InvalidArgumentError
+
+        with pytest.raises(InvalidArgumentError) as exc_info:
+            await handle_system_reboot(
+                admin_ctx,
+                {"delay_seconds": "not_a_number"},
+                config=full_sandbox_config,
+            )
+        assert "Invalid delay_seconds" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_delay_seconds_string_converted(
+        self, admin_ctx: ToolContext, full_sandbox_config: AppConfig
+    ) -> None:
+        """Test delay_seconds string is converted to int."""
         result = await handle_system_reboot(
             admin_ctx,
-            {"delay_seconds": -100},
+            {"delay_seconds": "10"},
             config=full_sandbox_config,
         )
-        assert result["effective_after_seconds"] == 0
+        assert result["effective_after_seconds"] == 10
 
     @pytest.mark.asyncio
     async def test_reason_truncated(

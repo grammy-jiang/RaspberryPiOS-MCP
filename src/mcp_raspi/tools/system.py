@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Any
 import psutil
 
 from mcp_raspi.context import ToolContext
-from mcp_raspi.errors import UnavailableError
+from mcp_raspi.errors import InvalidArgumentError, UnavailableError
 from mcp_raspi.logging import get_logger
 from mcp_raspi.security.audit_logger import get_audit_logger
 from mcp_raspi.security.rbac import require_role
@@ -32,6 +32,53 @@ if TYPE_CHECKING:
     from mcp_raspi.config import AppConfig
 
 logger = get_logger(__name__)
+
+# Constants for delay validation
+MIN_DELAY_SECONDS = 0
+MAX_DELAY_SECONDS = 600
+
+
+def _validate_delay_seconds(delay_seconds: Any, default: int = 5) -> int:
+    """
+    Validate and normalize delay_seconds parameter.
+
+    Uses the same validation logic as the privileged agent handler to provide
+    consistent error messages regardless of sandbox mode.
+
+    Args:
+        delay_seconds: Raw delay value from params.
+        default: Default value if delay_seconds is None.
+
+    Returns:
+        Validated delay in seconds.
+
+    Raises:
+        InvalidArgumentError: If delay is invalid type or out of range.
+    """
+    if delay_seconds is None:
+        delay_seconds = default
+
+    if not isinstance(delay_seconds, int):
+        try:
+            delay_seconds = int(delay_seconds)
+        except (ValueError, TypeError) as e:
+            raise InvalidArgumentError(
+                f"Invalid delay_seconds: {delay_seconds}",
+                details={"parameter": "delay_seconds"},
+            ) from e
+
+    if delay_seconds < MIN_DELAY_SECONDS or delay_seconds > MAX_DELAY_SECONDS:
+        raise InvalidArgumentError(
+            f"delay_seconds must be between {MIN_DELAY_SECONDS} and {MAX_DELAY_SECONDS}",
+            details={
+                "parameter": "delay_seconds",
+                "value": delay_seconds,
+                "min": MIN_DELAY_SECONDS,
+                "max": MAX_DELAY_SECONDS,
+            },
+        )
+
+    return delay_seconds
 
 
 # =============================================================================
@@ -55,6 +102,7 @@ def _get_raspberry_pi_model() -> str:
             model = model_path.read_text().strip().rstrip("\x00")
             return model
     except (OSError, PermissionError):
+        # Ignore errors reading /proc/device-tree/model; fall back to platform info.
         pass
 
     # Fallback to platform info
@@ -207,6 +255,7 @@ def _get_throttling_flags() -> dict[str, bool]:
                 flags["throttled"] = bool(throttle_bits & 0x4)
     except (FileNotFoundError, subprocess.TimeoutExpired, ValueError, OSError):
         # Expected on non-Raspberry Pi systems or if vcgencmd is unavailable; return default flags.
+        pass
 
     return flags
 
@@ -459,15 +508,13 @@ async def handle_system_reboot(
 
     Raises:
         PermissionDeniedError: If caller lacks admin role.
+        InvalidArgumentError: If delay_seconds is invalid.
         UnavailableError: If privileged agent is unavailable.
     """
     reason = params.get("reason", "")
     if reason and len(reason) > 200:
         reason = reason[:200]
-    delay_seconds = params.get("delay_seconds", 5)
-    if not isinstance(delay_seconds, int):
-        delay_seconds = 5
-    delay_seconds = max(0, min(600, delay_seconds))
+    delay_seconds = _validate_delay_seconds(params.get("delay_seconds"), default=5)
 
     # Determine sandbox mode
     sandbox_mode = "partial"  # Default
@@ -588,16 +635,14 @@ async def handle_system_shutdown(
 
     Raises:
         PermissionDeniedError: If caller lacks admin role.
+        InvalidArgumentError: If delay_seconds is invalid.
         FailedPreconditionError: If shutdown is disabled in config.
         UnavailableError: If privileged agent is unavailable.
     """
     reason = params.get("reason", "")
     if reason and len(reason) > 200:
         reason = reason[:200]
-    delay_seconds = params.get("delay_seconds", 5)
-    if not isinstance(delay_seconds, int):
-        delay_seconds = 5
-    delay_seconds = max(0, min(600, delay_seconds))
+    delay_seconds = _validate_delay_seconds(params.get("delay_seconds"), default=5)
 
     # Determine sandbox mode
     sandbox_mode = "partial"  # Default
