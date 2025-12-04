@@ -440,8 +440,8 @@ async def handle_process_list_processes(
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
 
-    # Small delay for CPU measurement accuracy (optional, can be removed for speed)
-    # await asyncio.sleep(0.1)
+    # Small delay (0.01s) for CPU measurement accuracy: ensures proc.cpu_percent() returns meaningful values.
+    await asyncio.sleep(0.01)
 
     # Second pass: collect process info
     for proc in psutil.process_iter():
