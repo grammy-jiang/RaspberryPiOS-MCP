@@ -280,11 +280,11 @@ All acceptance criteria above must be met for this issue to be considered comple
 
 ---
 
-**Note on Issue Format**:
-- **Issues #1-4** have complete custom prompts in this document
-- **Issues #5-12** have detailed specifications below, with custom prompts in [copilot-custom-prompts-issues-5-12.md](copilot-custom-prompts-issues-5-12.md)
-- All issues follow the same 3-part structure (Title, Description, Custom Prompt)
-- Each issue can be created following the process shown in the Quick Start Example above
+**Note on Document Structure**:
+- **Issues #1-4** have complete 3-part specifications (Title, Description, Custom Prompt) in this document
+- **Issues #5-12** have brief summaries below for reference - the complete 3-part specifications for all 12 issues are maintained in this single document
+- For complete specs including custom prompts for Issues #5-12, refer to the sections at line 809+ in this document
+- Each issue follows the same 3-part structure and can be created following the process shown in the Quick Start Example above
 
 ---
 

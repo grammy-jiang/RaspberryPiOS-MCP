@@ -49,8 +49,7 @@ The full design is captured in the numbered specs under `docs/` (recommended rea
 - **[`docs/quick-start-guide.md`](docs/quick-start-guide.md)** – Get started in 10 minutes (all roles)
 - **[`docs/document-navigator.md`](docs/document-navigator.md)** – Reading paths, dependencies, reference matrix
 - **[`docs/phase-1-scope-matrix.md`](docs/phase-1-scope-matrix.md)** – Complete Phase 1 implementation plan (AI-optimized)
-- **[`docs/github-copilot-agent-issue-plan.md`](docs/github-copilot-agent-issue-plan.md)** – GitHub Copilot Agent issue breakdown (12 issues, 6-hour sessions)
-- **[`docs/copilot-custom-prompts-issues-5-12.md`](docs/copilot-custom-prompts-issues-5-12.md)** – Custom prompts for Issues #5-12
+- **[`docs/github-copilot-agent-issue-plan.md`](docs/github-copilot-agent-issue-plan.md)** – GitHub Copilot Agent issue breakdown (12 complete issues with titles, descriptions, and custom prompts, optimized for 6-hour sessions)
 - **[`docs/github-issues-quick-reference.md`](docs/github-issues-quick-reference.md)** – Quick reference: all 12 issue titles and dependencies
 - **[`docs/test-matrix.md`](docs/test-matrix.md)** – Device/environment/function test coverage matrix
 - **[`docs/acceptance-checklist.md`](docs/acceptance-checklist.md)** – Pre-release validation checklist
