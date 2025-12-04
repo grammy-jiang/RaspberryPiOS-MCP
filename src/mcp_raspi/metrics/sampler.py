@@ -13,7 +13,6 @@ Design follows Doc 06 §4-5 (Metrics module and Sampling Design).
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -173,6 +172,11 @@ def collect_metrics(metrics_enabled: list[str]) -> list[MetricSample]:
     """
     Collect current system metrics.
 
+    This function performs blocking I/O operations and should be called
+    from an executor (e.g., via asyncio.run_in_executor) to avoid blocking
+    the event loop. Specifically, psutil.cpu_percent(interval=0.1) blocks
+    for 100ms to compute an accurate CPU usage reading.
+
     Args:
         metrics_enabled: List of metric types to collect.
 
@@ -182,7 +186,7 @@ def collect_metrics(metrics_enabled: list[str]) -> list[MetricSample]:
     samples = []
     timestamp = time.time()
 
-    # CPU percent (non-blocking, interval=0.1 for more accuracy)
+    # CPU percent (blocks for 100ms to get accurate reading)
     if METRIC_CPU_PERCENT in metrics_enabled:
         cpu_percent = psutil.cpu_percent(interval=0.1)
         samples.append(
