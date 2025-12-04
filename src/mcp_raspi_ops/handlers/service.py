@@ -33,38 +33,7 @@ ALLOWED_ACTIONS = {"start", "stop", "restart", "reload"}
 SYSTEMCTL_TIMEOUT = 30
 
 
-def _is_service_allowed(service_name: str, allowed_services: list[str]) -> bool:
-    """
-    Check if a service is allowed by the whitelist.
-
-    Args:
-        service_name: The service name to check.
-        allowed_services: List of allowed service names/patterns.
-
-    Returns:
-        True if service is allowed, False otherwise.
-    """
-    if not allowed_services:
-        return False
-
-    # Normalize service name
-    if not service_name.endswith(".service"):
-        normalized_name = f"{service_name}.service"
-    else:
-        normalized_name = service_name
-
-    for pattern in allowed_services:
-        if not pattern.endswith(".service") and not pattern.endswith("*"):
-            pattern = f"{pattern}.service"
-
-        if fnmatch.fnmatch(normalized_name, pattern):
-            return True
-        if fnmatch.fnmatch(service_name, pattern):
-            return True
-
-    return False
-
-
+from mcp_raspi.service_utils import is_service_allowed
 def _run_systemctl(
     args: list[str],
     timeout: int = SYSTEMCTL_TIMEOUT,
