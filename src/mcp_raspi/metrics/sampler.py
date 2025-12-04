@@ -173,8 +173,8 @@ def _get_cpu_temperature() -> float | None:
             first_sensor = list(temps.values())[0]
             if first_sensor:
                 return first_sensor[0].current
-    except (AttributeError, KeyError):
-        pass
+    except (AttributeError, KeyError) as e:
+        logger.debug("Failed to read CPU temperature via psutil.sensors_temperatures: %r", e)
 
     return None
 
