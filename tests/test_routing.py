@@ -41,7 +41,9 @@ async def error_handler(_ctx: ToolContext, _params: dict[str, Any]) -> dict[str,
     )
 
 
-async def exception_handler(_ctx: ToolContext, _params: dict[str, Any]) -> dict[str, Any]:
+async def exception_handler(
+    _ctx: ToolContext, _params: dict[str, Any]
+) -> dict[str, Any]:
     """A handler that raises a non-ToolError exception."""
     raise RuntimeError("Unexpected error")
 
@@ -318,11 +320,15 @@ class TestToolHandlerDecorator:
         registry = ToolRegistry()
 
         @tool_handler("ns1.tool1", registry=registry)
-        async def handler1(_ctx: ToolContext, _params: dict[str, Any]) -> dict[str, Any]:
+        async def handler1(
+            _ctx: ToolContext, _params: dict[str, Any]
+        ) -> dict[str, Any]:
             return {"handler": 1}
 
         @tool_handler("ns2.tool2", registry=registry)
-        async def handler2(_ctx: ToolContext, _params: dict[str, Any]) -> dict[str, Any]:
+        async def handler2(
+            _ctx: ToolContext, _params: dict[str, Any]
+        ) -> dict[str, Any]:
             return {"handler": 2}
 
         assert "ns1.tool1" in registry

@@ -289,7 +289,9 @@ class IPCResponse:
     error: IPCErrorDetail | None = None
 
     @classmethod
-    def success(cls, request_id: str, data: dict[str, Any] | None = None) -> IPCResponse:
+    def success(
+        cls, request_id: str, data: dict[str, Any] | None = None
+    ) -> IPCResponse:
         """
         Create a success response.
 

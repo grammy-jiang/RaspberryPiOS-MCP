@@ -176,9 +176,7 @@ class TestJWKSFetching:
                 await jwks_fetcher.get_keys()
 
     @pytest.mark.asyncio
-    async def test_get_keys_missing_keys_field(
-        self, jwks_fetcher: JWKSFetcher
-    ) -> None:
+    async def test_get_keys_missing_keys_field(self, jwks_fetcher: JWKSFetcher) -> None:
         """Test error when JWKS response missing 'keys' field."""
         mock_response = mock.MagicMock()  # json() is sync
         mock_response.json.return_value = {"invalid": "response"}

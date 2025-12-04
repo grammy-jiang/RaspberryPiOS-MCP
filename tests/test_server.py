@@ -81,12 +81,14 @@ class TestProcessRequest:
     @pytest.mark.asyncio
     async def test_valid_request(self, registry: ToolRegistry) -> None:
         """Test processing a valid request."""
-        request_json = json.dumps({
-            "jsonrpc": "2.0",
-            "id": "req-1",
-            "method": "system.get_basic_info",
-            "params": {},
-        })
+        request_json = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": "req-1",
+                "method": "system.get_basic_info",
+                "params": {},
+            }
+        )
 
         response = await process_request(request_json, registry)
         parsed = json.loads(response)
@@ -99,12 +101,14 @@ class TestProcessRequest:
     @pytest.mark.asyncio
     async def test_request_with_params(self, registry: ToolRegistry) -> None:
         """Test processing a request with parameters."""
-        request_json = json.dumps({
-            "jsonrpc": "2.0",
-            "id": "req-2",
-            "method": "system.echo",
-            "params": {"message": "hello"},
-        })
+        request_json = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": "req-2",
+                "method": "system.echo",
+                "params": {"message": "hello"},
+            }
+        )
 
         response = await process_request(request_json, registry)
         parsed = json.loads(response)
@@ -124,11 +128,13 @@ class TestProcessRequest:
     @pytest.mark.asyncio
     async def test_missing_jsonrpc_version(self, registry: ToolRegistry) -> None:
         """Test handling request without jsonrpc field."""
-        request_json = json.dumps({
-            "id": "req-3",
-            "method": "system.get_basic_info",
-            "params": {},
-        })
+        request_json = json.dumps(
+            {
+                "id": "req-3",
+                "method": "system.get_basic_info",
+                "params": {},
+            }
+        )
 
         response = await process_request(request_json, registry)
         parsed = json.loads(response)
@@ -139,12 +145,14 @@ class TestProcessRequest:
     @pytest.mark.asyncio
     async def test_tool_not_found(self, registry: ToolRegistry) -> None:
         """Test handling request for unknown tool."""
-        request_json = json.dumps({
-            "jsonrpc": "2.0",
-            "id": "req-4",
-            "method": "unknown.tool",
-            "params": {},
-        })
+        request_json = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": "req-4",
+                "method": "unknown.tool",
+                "params": {},
+            }
+        )
 
         response = await process_request(request_json, registry)
         parsed = json.loads(response)
@@ -156,12 +164,14 @@ class TestProcessRequest:
     @pytest.mark.asyncio
     async def test_tool_error_mapping(self, registry: ToolRegistry) -> None:
         """Test that ToolError is mapped to JSON-RPC error."""
-        request_json = json.dumps({
-            "jsonrpc": "2.0",
-            "id": "req-5",
-            "method": "system.error",
-            "params": {"bad_param": "value"},
-        })
+        request_json = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": "req-5",
+                "method": "system.error",
+                "params": {"bad_param": "value"},
+            }
+        )
 
         response = await process_request(request_json, registry)
         parsed = json.loads(response)
@@ -173,12 +183,14 @@ class TestProcessRequest:
     @pytest.mark.asyncio
     async def test_numeric_request_id(self, registry: ToolRegistry) -> None:
         """Test handling request with numeric ID."""
-        request_json = json.dumps({
-            "jsonrpc": "2.0",
-            "id": 42,
-            "method": "system.get_basic_info",
-            "params": {},
-        })
+        request_json = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": 42,
+                "method": "system.get_basic_info",
+                "params": {},
+            }
+        )
 
         response = await process_request(request_json, registry)
         parsed = json.loads(response)
@@ -189,11 +201,13 @@ class TestProcessRequest:
     @pytest.mark.asyncio
     async def test_notification_no_response(self, registry: ToolRegistry) -> None:
         """Test that notifications (no id) return None (no response per JSON-RPC spec)."""
-        request_json = json.dumps({
-            "jsonrpc": "2.0",
-            "method": "system.get_basic_info",
-            "params": {},
-        })
+        request_json = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": "system.get_basic_info",
+                "params": {},
+            }
+        )
 
         response = await process_request(request_json, registry)
 
@@ -227,12 +241,14 @@ class TestMCPServer:
         """Test handling a single request."""
         server = MCPServer(registry=registry)
 
-        request = json.dumps({
-            "jsonrpc": "2.0",
-            "id": "single-1",
-            "method": "system.get_basic_info",
-            "params": {},
-        })
+        request = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": "single-1",
+                "method": "system.get_basic_info",
+                "params": {},
+            }
+        )
 
         response = await server.handle_request(request)
         parsed = json.loads(response)
@@ -246,12 +262,14 @@ class TestMCPServer:
         server = MCPServer(registry=registry)
 
         for i in range(3):
-            request = json.dumps({
-                "jsonrpc": "2.0",
-                "id": f"multi-{i}",
-                "method": "system.echo",
-                "params": {"count": i},
-            })
+            request = json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "id": f"multi-{i}",
+                    "method": "system.echo",
+                    "params": {"count": i},
+                }
+            )
 
             response = await server.handle_request(request)
             parsed = json.loads(response)
@@ -348,12 +366,14 @@ class TestServerIntegration:
 
         # Create multiple requests
         requests = [
-            json.dumps({
-                "jsonrpc": "2.0",
-                "id": f"concurrent-{i}",
-                "method": "system.echo",
-                "params": {"index": i},
-            })
+            json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "id": f"concurrent-{i}",
+                    "method": "system.echo",
+                    "params": {"index": i},
+                }
+            )
             for i in range(10)
         ]
 

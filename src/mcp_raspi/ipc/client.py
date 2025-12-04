@@ -499,7 +499,7 @@ class IPCClient:
                 # Ignore exceptions during cleanup, but log for diagnostics.
                 logger.warning(
                     "Exception during IPC connection cleanup (ignored)",
-                    extra={"error": str(e)}
+                    extra={"error": str(e)},
                 )
 
         self._reader = None

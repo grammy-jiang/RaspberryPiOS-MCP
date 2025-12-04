@@ -99,11 +99,7 @@ class ToolRegistry:
         if namespace is None:
             return list(self._handlers.keys())
 
-        return [
-            name
-            for name in self._handlers
-            if name.startswith(f"{namespace}.")
-        ]
+        return [name for name in self._handlers if name.startswith(f"{namespace}.")]
 
     def list_namespaces(self) -> list[str]:
         """
@@ -216,4 +212,5 @@ def tool_handler(
         target_registry = registry if registry is not None else get_default_registry()
         target_registry.register(name, handler)
         return handler
+
     return decorator
