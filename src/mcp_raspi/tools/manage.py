@@ -128,10 +128,19 @@ async def handle_manage_get_server_status(
 
     # Try to get version info from version.json if different from package
     version_info = await _get_version_info(version_file, config)
-    if version_info and version_info.get("current") != __version__:
-        result["installed_version"] = version_info.get("current")
-        result["previous_version"] = version_info.get("previous")
-
+    # Only include installed_version and previous_version if version_info is well-formed and meaningful.
+    # These fields are populated during an update transition when the running version differs from the installed version.
+    if (
+        version_info
+        and isinstance(version_info.get("current"), str)
+        and version_info.get("current") != __version__
+    ):
+        installed_version = version_info.get("current")
+        previous_version = version_info.get("previous")
+        if installed_version:
+            result["installed_version"] = installed_version
+        if previous_version and isinstance(previous_version, str):
+            result["previous_version"] = previous_version
     return result
 
 
