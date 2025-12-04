@@ -106,9 +106,10 @@ class RequestIDGenerator:
         # Track active IDs
         self._active_ids.add(request_id)
 
-        # Cleanup old IDs to prevent memory leak
+        # Cleanup IDs to prevent memory leak
         if len(self._active_ids) > self._max_active_ids:
-            # Remove oldest 10%
+            # Remove arbitrary 10% - order doesn't matter for collision prevention
+            # since IDs include timestamps and randomness for uniqueness
             to_remove = list(self._active_ids)[: self._max_active_ids // 10]
             self._active_ids -= set(to_remove)
 

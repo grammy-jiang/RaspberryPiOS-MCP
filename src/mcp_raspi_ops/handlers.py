@@ -214,7 +214,7 @@ async def handle_get_info(_request: IPCRequest) -> dict[str, Any]:
     Returns information about the privileged agent.
 
     Args:
-        request: The IPC request.
+        _request: The IPC request (unused).
 
     Returns:
         Dict with agent information.

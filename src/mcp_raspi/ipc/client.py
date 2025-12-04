@@ -350,15 +350,42 @@ class IPCClient:
             logger.warning("IPC connection lost", extra={"error": str(e)})
             await self._mark_connection_dead()
 
-            # Retry once after reconnection
+            # Retry once after reconnection (non-recursive to prevent infinite recursion)
             if self.reconnect_enabled and await self._reconnect_with_backoff():
                 logger.info("Retrying IPC request after reconnection")
-                return await self.call(operation, params, timeout)
-            else:
-                raise IPCUnavailableError(
-                    "Privileged agent unavailable",
-                    details={"socket_path": self.socket_path},
-                ) from e
+                # Re-send the request without recursive call protection
+                # to avoid stack overflow on repeated failures
+                await self.ensure_connected()
+                new_request_id = self._id_generator.generate()
+                new_request = IPCRequest.create(
+                    operation=operation,
+                    params=params,
+                    request_id=new_request_id,
+                )
+                try:
+                    await self._send(new_request)
+                    response = await asyncio.wait_for(
+                        self._receive(new_request_id),
+                        timeout=timeout,
+                    )
+                    if response.is_success:
+                        return response.data or {}
+                    else:
+                        error = response.error
+                        if error:
+                            raise IPCProtocolError(
+                                error.message,
+                                details={"code": error.code, **error.details},
+                            )
+                        else:
+                            raise IPCProtocolError("Unknown error from agent")
+                finally:
+                    self._id_generator.mark_completed(new_request_id)
+
+            raise IPCUnavailableError(
+                "Privileged agent unavailable",
+                details={"socket_path": self.socket_path},
+            ) from e
 
         finally:
             # Clean up request ID tracking
