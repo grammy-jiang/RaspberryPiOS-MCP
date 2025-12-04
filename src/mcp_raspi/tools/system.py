@@ -413,8 +413,10 @@ async def handle_system_get_network_info(
                     parts = line.split()
                     if len(parts) >= 2:
                         dns_servers.append(parts[1])
-    except (OSError, PermissionError):
-        pass
+    except (OSError, PermissionError) as e:
+        # Could not read /etc/resolv.conf (e.g., missing or permission denied).
+        # This is non-fatal; DNS server info will be omitted.
+        logger.debug("Could not read /etc/resolv.conf for DNS servers: %s", e)
 
     return {
         "interfaces": interfaces,
