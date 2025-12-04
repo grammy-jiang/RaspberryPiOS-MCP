@@ -43,6 +43,84 @@ DEFAULT_PACKAGE_NAME = "mcp-raspi"
 # Default staging directory
 DEFAULT_STAGING_DIR = Path("/opt/mcp-raspi/staging")
 
+# Pattern for valid package names (PEP 508 compliant)
+VALID_PACKAGE_NAME_PATTERN = r"^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?$"
+
+# Pattern for valid index URLs
+VALID_URL_PATTERN = r"^https?://[^\s<>\"'`]+$"
+
+# Dangerous characters that should not appear in command arguments
+DANGEROUS_CHARS = set(";|&$`\n\r")
+
+
+def _sanitize_argument(arg: str, arg_name: str) -> str:
+    """
+    Sanitize a command argument to prevent injection attacks.
+
+    Args:
+        arg: The argument to sanitize.
+        arg_name: Name of the argument for error messages.
+
+    Returns:
+        The sanitized argument.
+
+    Raises:
+        InvalidArgumentError: If the argument contains dangerous characters.
+    """
+    if not arg:
+        raise InvalidArgumentError(
+            f"{arg_name} cannot be empty",
+            details={arg_name: arg},
+        )
+
+    # Check for dangerous shell metacharacters
+    dangerous_found = DANGEROUS_CHARS.intersection(arg)
+    if dangerous_found:
+        raise InvalidArgumentError(
+            f"{arg_name} contains invalid characters",
+            details={
+                arg_name: arg,
+                "invalid_chars": list(dangerous_found),
+            },
+        )
+
+    # Check for path traversal attempts
+    if (
+        ".." in arg or arg.startswith("/") or arg.startswith("~")
+    ) and arg_name not in ("path", "staging_dir", "releases_dir"):
+        raise InvalidArgumentError(
+            f"{arg_name} contains path traversal sequences",
+            details={arg_name: arg},
+        )
+
+    return arg
+
+
+def _validate_package_name(name: str) -> str:
+    """Validate a Python package name."""
+    import re
+
+    _sanitize_argument(name, "package_name")
+    if not re.match(VALID_PACKAGE_NAME_PATTERN, name):
+        raise InvalidArgumentError(
+            "Invalid package name format",
+            details={"package_name": name, "pattern": VALID_PACKAGE_NAME_PATTERN},
+        )
+    return name
+
+
+def _validate_url(url: str, url_name: str) -> str:
+    """Validate a URL argument."""
+    import re
+
+    _sanitize_argument(url, url_name)
+    if not re.match(VALID_URL_PATTERN, url):
+        raise InvalidArgumentError(
+            f"Invalid {url_name} format - must be http:// or https:// URL",
+            details={url_name: url},
+        )
+    return url
+
 
 class PythonPackageBackend(UpdateBackend):
     """
@@ -78,11 +156,19 @@ class PythonPackageBackend(UpdateBackend):
             staging_dir: Directory for staging downloads.
             index_url: Optional custom PyPI index URL.
             extra_index_url: Optional extra PyPI index URL.
+
+        Raises:
+            InvalidArgumentError: If package_name or URLs are invalid.
         """
-        self.package_name = package_name
+        # Validate and sanitize inputs
+        self.package_name = _validate_package_name(package_name)
         self.staging_dir = Path(staging_dir) if staging_dir else DEFAULT_STAGING_DIR
-        self.index_url = index_url
-        self.extra_index_url = extra_index_url
+        self.index_url = _validate_url(index_url, "index_url") if index_url else None
+        self.extra_index_url = (
+            _validate_url(extra_index_url, "extra_index_url")
+            if extra_index_url
+            else None
+        )
         self._use_uv = self._check_uv_available()
 
     def _check_uv_available(self) -> bool:
@@ -225,7 +311,7 @@ class PythonPackageBackend(UpdateBackend):
                 try:
                     parsed = parse_semantic_version(v)
                     # Only include versions with no prerelease part
-                    if not getattr(parsed, "prerelease", None):
+                    if not parsed.get("prerelease"):
                         filtered_versions.append(v)
                 except InvalidArgumentError:
                     continue
@@ -371,7 +457,7 @@ class PythonPackageBackend(UpdateBackend):
                 },
             )
 
-        # Find downloaded file
+        # Find downloaded file and validate
         downloaded_files = list(staging_path.glob(f"{self.package_name}*"))
         if not downloaded_files:
             raise InternalError(
@@ -379,12 +465,50 @@ class PythonPackageBackend(UpdateBackend):
                 details={"staging_path": str(staging_path)},
             )
 
+        # Validate downloaded files: check size and basic integrity
+        MIN_PACKAGE_SIZE = 1024  # Minimum 1KB for a valid package
+        validated_files = []
+        for file_path in downloaded_files:
+            file_size = file_path.stat().st_size
+            if file_size < MIN_PACKAGE_SIZE:
+                logger.warning(
+                    "Downloaded file is suspiciously small",
+                    extra={
+                        "file": file_path.name,
+                        "size": file_size,
+                        "min_expected": MIN_PACKAGE_SIZE,
+                    },
+                )
+                continue
+
+            # For wheel files, verify it's a valid zip (wheels are zip files)
+            if file_path.suffix == ".whl":
+                import zipfile
+
+                if not zipfile.is_zipfile(file_path):
+                    logger.warning(
+                        "Downloaded wheel file is not a valid zip",
+                        extra={"file": file_path.name},
+                    )
+                    continue
+
+            validated_files.append(file_path)
+
+        if not validated_files:
+            raise InternalError(
+                "Package download succeeded but all files failed validation",
+                details={
+                    "staging_path": str(staging_path),
+                    "attempted_files": [f.name for f in downloaded_files],
+                },
+            )
+
         logger.info(
             "Update prepared successfully",
             extra={
                 "version": version,
                 "staging_path": str(staging_path),
-                "files": [f.name for f in downloaded_files],
+                "files": [f.name for f in validated_files],
             },
         )
 
@@ -394,7 +518,7 @@ class PythonPackageBackend(UpdateBackend):
             staging_path=str(staging_path),
             metadata={
                 "package_name": self.package_name,
-                "downloaded_files": [f.name for f in downloaded_files],
+                "downloaded_files": [f.name for f in validated_files],
             },
         )
 
@@ -509,6 +633,10 @@ class PythonPackageBackend(UpdateBackend):
         """
         Get information about an installed version.
 
+        Uses email.parser for proper RFC 822 parsing of METADATA files,
+        which correctly handles multiline values and edge cases according
+        to Python packaging standards.
+
         Args:
             version_dir: Path to the version directory.
 
@@ -523,20 +651,16 @@ class PythonPackageBackend(UpdateBackend):
         if dist_info_dirs:
             metadata_file = dist_info_dirs[0] / "METADATA"
             if metadata_file.exists():
-                metadata = {}
-                current_key = None
-                for line in metadata_file.read_text().splitlines():
-                    if ": " in line and not line.startswith(" "):
-                        key, value = line.split(": ", 1)
-                        metadata[key.lower()] = value
-                        current_key = key.lower()
-                    elif current_key and line.startswith(" "):
-                        metadata[current_key] += "\n" + line.strip()
+                # Use email.parser for proper RFC 822 parsing
+                from email.parser import Parser
+
+                parser = Parser()
+                msg = parser.parsestr(metadata_file.read_text())
 
                 return {
-                    "name": metadata.get("name", self.package_name),
-                    "version": metadata.get("version", "unknown"),
-                    "summary": metadata.get("summary", ""),
+                    "name": msg.get("Name", self.package_name),
+                    "version": msg.get("Version", "unknown"),
+                    "summary": msg.get("Summary", ""),
                     "path": str(version_dir),
                 }
 

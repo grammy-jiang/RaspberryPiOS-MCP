@@ -15,11 +15,12 @@ import copy
 import hashlib
 import json
 import os
-import re
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import semver
 from pydantic import BaseModel, Field, field_validator
 
 from mcp_raspi.errors import InvalidArgumentError
@@ -27,21 +28,12 @@ from mcp_raspi.logging import get_logger
 
 logger = get_logger(__name__)
 
-# Semantic versioning regex pattern
-# Accepts: 1.0.0, 1.2.3, 2.0.0-beta.1, 1.0.0-alpha+build.123
-SEMVER_PATTERN = re.compile(
-    r"^(?P<major>0|[1-9]\d*)"
-    r"\.(?P<minor>0|[1-9]\d*)"
-    r"\.(?P<patch>0|[1-9]\d*)"
-    r"(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)"
-    r"(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
-    r"(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"
-)
-
 
 def parse_semantic_version(version: str) -> dict[str, Any]:
     """
     Parse and validate a semantic version string.
+
+    Uses the semver library for robust, standards-compliant parsing.
 
     Args:
         version: Version string (e.g., "1.0.0", "1.2.3-beta.1").
@@ -70,29 +62,35 @@ def parse_semantic_version(version: str) -> dict[str, Any]:
             details={"version": version, "hint": "Use '1.0.0' instead of 'v1.0.0'"},
         )
 
-    match = SEMVER_PATTERN.match(version)
-    if not match:
+    try:
+        ver = semver.Version.parse(version)
+        return {
+            "major": ver.major,
+            "minor": ver.minor,
+            "patch": ver.patch,
+            "prerelease": ver.prerelease if ver.prerelease else None,
+            "buildmetadata": ver.build if ver.build else None,
+        }
+    except ValueError as e:
         raise InvalidArgumentError(
             f"Invalid semantic version: {version}",
             details={
                 "version": version,
                 "format": "MAJOR.MINOR.PATCH[-PRERELEASE][+BUILDMETADATA]",
                 "examples": ["1.0.0", "1.2.3", "2.0.0-beta.1"],
+                "error": str(e),
             },
-        )
-
-    return {
-        "major": int(match.group("major")),
-        "minor": int(match.group("minor")),
-        "patch": int(match.group("patch")),
-        "prerelease": match.group("prerelease"),
-        "buildmetadata": match.group("buildmetadata"),
-    }
+        ) from e
 
 
 def compare_versions(v1: str, v2: str) -> int:
     """
-    Compare two semantic versions.
+    Compare two semantic versions following semver specification.
+
+    Uses the semver library for proper prerelease precedence handling:
+    - Prerelease identifiers are compared as dot-separated components
+    - Numeric identifiers are compared as integers
+    - Example: "1.0.0-alpha.1" < "1.0.0-alpha.2" < "1.0.0-alpha.12" < "1.0.0-beta.1"
 
     Args:
         v1: First version string.
@@ -104,31 +102,19 @@ def compare_versions(v1: str, v2: str) -> int:
     Raises:
         InvalidArgumentError: If either version is invalid.
     """
-    p1 = parse_semantic_version(v1)
-    p2 = parse_semantic_version(v2)
+    # Validate both versions first
+    parse_semantic_version(v1)
+    parse_semantic_version(v2)
 
-    # Compare major, minor, patch
-    for key in ["major", "minor", "patch"]:
-        if p1[key] < p2[key]:
-            return -1
-        elif p1[key] > p2[key]:
-            return 1
-
-    # Handle prerelease (no prerelease > with prerelease)
-    pre1 = p1.get("prerelease")
-    pre2 = p2.get("prerelease")
-
-    if pre1 is None and pre2 is not None:
-        return 1
-    if pre1 is not None and pre2 is None:
-        return -1
-    if pre1 is not None and pre2 is not None:
-        if pre1 < pre2:
-            return -1
-        elif pre1 > pre2:
-            return 1
-
-    return 0
+    try:
+        ver1 = semver.Version.parse(v1)
+        ver2 = semver.Version.parse(v2)
+        return ver1.compare(ver2)
+    except ValueError as e:
+        raise InvalidArgumentError(
+            f"Invalid version comparison: {e}",
+            details={"v1": v1, "v2": v2},
+        ) from e
 
 
 # =============================================================================
@@ -487,10 +473,15 @@ class VersionManager:
         """
         Save version info to a file with atomic write.
 
+        Uses tempfile.mkstemp() to create a truly unique temporary file,
+        avoiding race conditions when multiple processes write simultaneously.
+
         Args:
             path: Path to save to.
             version_info: Version info to save.
         """
+        import contextlib
+
         # Ensure parent directory exists
         path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -498,17 +489,27 @@ class VersionManager:
         data = version_info.model_dump(exclude_none=True)
         data["checksum"] = self._calculate_checksum(data)
 
-        # Atomic write: write to temp file, then rename
-        temp_path = path.with_suffix(".tmp")
+        # Atomic write: create unique temp file, write, then rename
+        fd, temp_path = tempfile.mkstemp(
+            dir=path.parent,
+            prefix=".version_",
+            suffix=".tmp",
+        )
 
-        with open(temp_path, "w") as f:
-            json.dump(data, f, indent=2)
-            f.flush()
-            # Ensure data is written to disk
-            os.fsync(f.fileno())
+        try:
+            with os.fdopen(fd, "w") as f:
+                json.dump(data, f, indent=2)
+                f.flush()
+                # Ensure data is written to disk
+                os.fsync(f.fileno())
 
-        # Atomic rename
-        temp_path.rename(path)
+            # Atomic rename
+            os.rename(temp_path, path)
+        except Exception:
+            # Clean up temp file on failure
+            with contextlib.suppress(OSError):
+                os.unlink(temp_path)
+            raise
 
         logger.debug("Saved version info", extra={"path": str(path)})
 

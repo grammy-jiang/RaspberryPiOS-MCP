@@ -136,7 +136,7 @@ def atomic_symlink_switch(
 
     # Create temp symlink in the same directory (for atomic rename)
     # Generate a unique temp symlink path and create the symlink directly
-    for attempt in range(10):
+    for _attempt in range(10):
         temp_name = f".symlink_tmp_{next(tempfile._get_candidate_names())}"
         temp_path = symlink_path.parent / temp_name
         if not temp_path.exists():
@@ -168,11 +168,11 @@ def atomic_symlink_switch(
 
     except OSError as e:
         # Clean up temp symlink if it exists
-        try:
+        import contextlib
+
+        with contextlib.suppress(OSError):
             if os.path.lexists(temp_path):
                 os.unlink(temp_path)
-        except OSError:
-            pass
 
         raise InternalError(
             f"Failed to switch symlink atomically: {e}",

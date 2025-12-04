@@ -214,9 +214,14 @@ class TestPythonPackageBackendPrepare:
             ) -> tuple[int, str, str]:
                 # Create fake downloaded file when pip download is called
                 # The staging_path is already created by prepare(), we just
-                # need to add the "downloaded" file
+                # need to add the "downloaded" file with sufficient size
                 staging_path.mkdir(exist_ok=True)
-                (staging_path / "mcp-raspi-1.0.0-py3-none-any.whl").touch()
+                wheel_file = staging_path / "mcp-raspi-1.0.0-py3-none-any.whl"
+                # Create a minimal valid zip file (wheels are zip files)
+                import zipfile
+
+                with zipfile.ZipFile(wheel_file, "w") as zf:
+                    zf.writestr("dummy.py", "# Dummy content\n" * 100)
                 return (0, "Successfully downloaded mcp-raspi-1.0.0.whl", "")
 
             with patch.object(
@@ -242,9 +247,14 @@ class TestPythonPackageBackendPrepare:
             async def mock_run_with_side_effect(
                 *_args: str, **_kwargs: int
             ) -> tuple[int, str, str]:
-                # Create fake downloaded file
+                # Create fake downloaded file with sufficient size
                 staging_path.mkdir(exist_ok=True)
-                (staging_path / "mcp-raspi-1.2.0-py3-none-any.whl").touch()
+                wheel_file = staging_path / "mcp-raspi-1.2.0-py3-none-any.whl"
+                # Create a minimal valid zip file (wheels are zip files)
+                import zipfile
+
+                with zipfile.ZipFile(wheel_file, "w") as zf:
+                    zf.writestr("dummy.py", "# Dummy content\n" * 100)
                 return (0, "Successfully downloaded mcp-raspi-1.2.0.whl", "")
 
             with (

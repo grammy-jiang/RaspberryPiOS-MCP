@@ -501,22 +501,25 @@ class TestListInstalledVersionsSorted:
 
     def test_list_versions_sorted_by_mtime(self) -> None:
         """Test that versions are sorted by modification time."""
-        import time
+        import os
 
         with tempfile.TemporaryDirectory() as tmpdir:
             releases_dir = Path(tmpdir) / "releases"
 
-            # Create versions with different mtimes
+            # Create versions with explicitly different mtimes using os.utime()
+            # This is more reliable than time.sleep() on filesystems with
+            # low timestamp resolution
             v1 = releases_dir / "v1.0.0"
             v1.mkdir(parents=True)
-            time.sleep(0.01)  # Small delay to ensure different mtimes
+            os.utime(v1, (1000, 1000))  # Oldest
 
             v2 = releases_dir / "v2.0.0"
             v2.mkdir()
-            time.sleep(0.01)
+            os.utime(v2, (2000, 2000))  # Middle
 
             v3 = releases_dir / "v1.5.0"
             v3.mkdir()
+            os.utime(v3, (3000, 3000))  # Newest
 
             versions = list_installed_versions(releases_dir)
 
