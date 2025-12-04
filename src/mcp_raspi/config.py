@@ -272,6 +272,44 @@ class ToolNamespaceConfig(BaseModel):
     )
 
 
+class ServiceToolsConfig(ToolNamespaceConfig):
+    """Configuration for service tools namespace.
+
+    Attributes:
+        enabled: Whether the namespace is enabled.
+        allowed_services: List of service names/patterns allowed for management.
+    """
+
+    allowed_services: list[str] = Field(
+        default_factory=list,
+        description="List of service names or patterns allowed for management (e.g., 'nginx', 'mcp-raspi-*')",
+    )
+
+
+def _default_deny_pids() -> list[int]:
+    """Return default list of protected PIDs (PID 1 / systemd)."""
+    return [1]
+
+
+class ProcessToolsConfig(ToolNamespaceConfig):
+    """Configuration for process tools namespace.
+
+    Attributes:
+        enabled: Whether the namespace is enabled.
+        allowed_users: List of users whose processes can be managed.
+        deny_pids: List of PIDs that are always protected.
+    """
+
+    allowed_users: list[str] = Field(
+        default_factory=list,
+        description="List of users whose processes can be managed",
+    )
+    deny_pids: list[int] = Field(
+        default_factory=_default_deny_pids,
+        description="List of PIDs that are always protected from management",
+    )
+
+
 class ToolsConfig(BaseModel):
     """Tool namespace configuration.
 
@@ -295,12 +333,12 @@ class ToolsConfig(BaseModel):
         default_factory=ToolNamespaceConfig,
         description="Metrics tools configuration",
     )
-    service: ToolNamespaceConfig = Field(
-        default_factory=ToolNamespaceConfig,
+    service: ServiceToolsConfig = Field(
+        default_factory=ServiceToolsConfig,
         description="Service tools configuration",
     )
-    process: ToolNamespaceConfig = Field(
-        default_factory=ToolNamespaceConfig,
+    process: ProcessToolsConfig = Field(
+        default_factory=ProcessToolsConfig,
         description="Process tools configuration",
     )
     gpio: ToolNamespaceConfig = Field(

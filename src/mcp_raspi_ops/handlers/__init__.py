@@ -8,6 +8,8 @@ Modules:
 - system: System power operations (reboot, shutdown)
 - gpio: GPIO device control operations (read, write, configure, PWM)
 - i2c: I2C bus operations (scan, read, write)
+- service: Systemd service management (list, status, control, enable/disable)
+- process: Process monitoring (list, info)
 
 Re-exports all base classes from handlers_core for backward compatibility.
 """
@@ -30,6 +32,22 @@ from mcp_raspi_ops.handlers.i2c import (
     handle_i2c_scan,
     handle_i2c_write,
     register_i2c_handlers,
+)
+
+# Import and re-export process handlers
+from mcp_raspi_ops.handlers.process import (
+    handle_process_get_info,
+    handle_process_list_processes,
+    register_process_handlers,
+)
+
+# Import and re-export service handlers
+from mcp_raspi_ops.handlers.service import (
+    handle_service_control_service,
+    handle_service_get_status,
+    handle_service_list_services,
+    handle_service_set_enabled,
+    register_service_handlers,
 )
 
 # Import and re-export system handlers
@@ -75,4 +93,14 @@ __all__ = [
     "handle_i2c_read",
     "handle_i2c_write",
     "register_i2c_handlers",
+    # Service handlers
+    "handle_service_list_services",
+    "handle_service_get_status",
+    "handle_service_control_service",
+    "handle_service_set_enabled",
+    "register_service_handlers",
+    # Process handlers
+    "handle_process_list_processes",
+    "handle_process_get_info",
+    "register_process_handlers",
 ]
