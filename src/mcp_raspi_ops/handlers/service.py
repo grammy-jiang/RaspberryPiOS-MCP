@@ -159,6 +159,7 @@ def _parse_service_status_output(output: str) -> dict[str, Any]:
                     elif mem_str.endswith("G"):
                         result["memory_bytes"] = int(float(mem_str[:-1]) * 1024 * 1024 * 1024)
                 except (ValueError, IndexError):
+                    # Ignore memory parsing errors; field is optional and may be missing or malformed.
                     pass
 
         elif line.startswith("CPU:"):
