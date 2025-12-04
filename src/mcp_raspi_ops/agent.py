@@ -141,7 +141,8 @@ class OpsAgent:
             async with self._server:
                 await self._server.serve_forever()
         except asyncio.CancelledError:
-            pass
+            # Agent shutdown requested; cancellation is expected during stop.
+            logger.info("Privileged agent received cancellation, shutting down gracefully")
         finally:
             self.running = False
             logger.info("Privileged agent stopped")
