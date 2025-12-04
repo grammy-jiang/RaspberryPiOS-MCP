@@ -301,9 +301,10 @@ class TestRequireRoleDecorator:
         """Test decorator finds context in kwargs."""
 
         @require_role("admin")
-        async def handler(_params: dict, ctx: ToolContext | None = None) -> dict[str, str]:
-            # ctx is used to pass context via kwargs
-            del ctx  # unused in handler body
+        async def handler(
+            _params: dict,
+            ctx: ToolContext | None = None,  # noqa: ARG001 - used by decorator
+        ) -> dict[str, str]:
             return {"status": "ok"}
 
         result = await handler({}, ctx=admin_context)

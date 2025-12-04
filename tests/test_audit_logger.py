@@ -401,7 +401,7 @@ class TestGlobalAuditLogger:
     def test_get_audit_logger_default(self) -> None:
         """Test getting default audit logger."""
         # Clear any existing global logger
-        set_audit_logger(None)  # type: ignore
+        set_audit_logger(None)
 
         logger = get_audit_logger()
         assert isinstance(logger, AuditLogger)

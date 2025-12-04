@@ -368,12 +368,12 @@ def get_audit_logger() -> AuditLogger:
     return _audit_logger
 
 
-def set_audit_logger(audit_logger: AuditLogger) -> None:
+def set_audit_logger(audit_logger: AuditLogger | None) -> None:
     """
     Set the global audit logger instance.
 
     Args:
-        audit_logger: The AuditLogger to use globally.
+        audit_logger: The AuditLogger to use globally, or None to reset.
     """
     global _audit_logger
     _audit_logger = audit_logger
