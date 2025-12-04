@@ -240,9 +240,7 @@ class TestIPCServerProtocol:
         request_bytes = request.to_json().encode("utf-8")
         length_prefix = len(request_bytes).to_bytes(4, byteorder="big")
 
-        mock_reader.readexactly = AsyncMock(
-            side_effect=[length_prefix, request_bytes]
-        )
+        mock_reader.readexactly = AsyncMock(side_effect=[length_prefix, request_bytes])
 
         protocol = IPCServerProtocol(mock_reader, mock_writer)
         result = await protocol.read_request()

@@ -224,9 +224,7 @@ class TestIPCClientCall:
         response_bytes = response.to_json().encode("utf-8")
         length_prefix = len(response_bytes).to_bytes(4, byteorder="big")
 
-        mock_reader.readexactly = AsyncMock(
-            side_effect=[length_prefix, response_bytes]
-        )
+        mock_reader.readexactly = AsyncMock(side_effect=[length_prefix, response_bytes])
 
         client._reader = mock_reader
         client._writer = mock_writer
@@ -257,9 +255,7 @@ class TestIPCClientCall:
         response_bytes = response.to_json().encode("utf-8")
         length_prefix = len(response_bytes).to_bytes(4, byteorder="big")
 
-        mock_reader.readexactly = AsyncMock(
-            side_effect=[length_prefix, response_bytes]
-        )
+        mock_reader.readexactly = AsyncMock(side_effect=[length_prefix, response_bytes])
 
         client._reader = mock_reader
         client._writer = mock_writer
@@ -281,7 +277,8 @@ class TestIPCClientCall:
 
         # Make reader hang forever
         async def hang_forever(
-            *_args: object, **_kwargs: object  # noqa: ARG001
+            *_args: object,
+            **_kwargs: object,  # noqa: ARG001
         ) -> bytes:
             await asyncio.sleep(100)
             return b""

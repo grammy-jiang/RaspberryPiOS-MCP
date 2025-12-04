@@ -42,12 +42,14 @@ class TestParseRequest:
 
     def test_parse_valid_request(self) -> None:
         """Test parsing a valid JSON-RPC 2.0 request."""
-        request_json = json.dumps({
-            "jsonrpc": "2.0",
-            "id": "req-1",
-            "method": "system.get_basic_info",
-            "params": {},
-        })
+        request_json = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": "req-1",
+                "method": "system.get_basic_info",
+                "params": {},
+            }
+        )
 
         request = parse_request(request_json)
 
@@ -58,12 +60,14 @@ class TestParseRequest:
 
     def test_parse_request_with_params(self) -> None:
         """Test parsing a request with parameters."""
-        request_json = json.dumps({
-            "jsonrpc": "2.0",
-            "id": "req-2",
-            "method": "gpio.write_pin",
-            "params": {"pin": 17, "value": "high"},
-        })
+        request_json = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": "req-2",
+                "method": "gpio.write_pin",
+                "params": {"pin": 17, "value": "high"},
+            }
+        )
 
         request = parse_request(request_json)
 
@@ -71,12 +75,14 @@ class TestParseRequest:
 
     def test_parse_request_with_numeric_id(self) -> None:
         """Test parsing a request with numeric ID."""
-        request_json = json.dumps({
-            "jsonrpc": "2.0",
-            "id": 42,
-            "method": "system.get_basic_info",
-            "params": {},
-        })
+        request_json = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": 42,
+                "method": "system.get_basic_info",
+                "params": {},
+            }
+        )
 
         request = parse_request(request_json)
 
@@ -84,11 +90,13 @@ class TestParseRequest:
 
     def test_parse_request_without_params(self) -> None:
         """Test parsing a request without params field (optional)."""
-        request_json = json.dumps({
-            "jsonrpc": "2.0",
-            "id": "req-3",
-            "method": "system.get_basic_info",
-        })
+        request_json = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": "req-3",
+                "method": "system.get_basic_info",
+            }
+        )
 
         request = parse_request(request_json)
 
@@ -96,11 +104,13 @@ class TestParseRequest:
 
     def test_parse_notification_without_id(self) -> None:
         """Test parsing a notification (request without id)."""
-        request_json = json.dumps({
-            "jsonrpc": "2.0",
-            "method": "system.notify",
-            "params": {},
-        })
+        request_json = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": "system.notify",
+                "params": {},
+            }
+        )
 
         request = parse_request(request_json)
 
@@ -120,11 +130,13 @@ class TestParseRequest:
 
     def test_parse_missing_jsonrpc_field(self) -> None:
         """Test handling request without jsonrpc field."""
-        request_json = json.dumps({
-            "id": "req-1",
-            "method": "system.get_basic_info",
-            "params": {},
-        })
+        request_json = json.dumps(
+            {
+                "id": "req-1",
+                "method": "system.get_basic_info",
+                "params": {},
+            }
+        )
 
         with pytest.raises(JSONRPCError) as exc_info:
             parse_request(request_json)
@@ -135,12 +147,14 @@ class TestParseRequest:
 
     def test_parse_wrong_jsonrpc_version(self) -> None:
         """Test handling request with wrong jsonrpc version."""
-        request_json = json.dumps({
-            "jsonrpc": "1.0",
-            "id": "req-1",
-            "method": "system.get_basic_info",
-            "params": {},
-        })
+        request_json = json.dumps(
+            {
+                "jsonrpc": "1.0",
+                "id": "req-1",
+                "method": "system.get_basic_info",
+                "params": {},
+            }
+        )
 
         with pytest.raises(JSONRPCError) as exc_info:
             parse_request(request_json)
@@ -151,11 +165,13 @@ class TestParseRequest:
 
     def test_parse_missing_method_field(self) -> None:
         """Test handling request without method field."""
-        request_json = json.dumps({
-            "jsonrpc": "2.0",
-            "id": "req-1",
-            "params": {},
-        })
+        request_json = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": "req-1",
+                "params": {},
+            }
+        )
 
         with pytest.raises(JSONRPCError) as exc_info:
             parse_request(request_json)
@@ -166,12 +182,14 @@ class TestParseRequest:
 
     def test_parse_empty_method(self) -> None:
         """Test handling request with empty method."""
-        request_json = json.dumps({
-            "jsonrpc": "2.0",
-            "id": "req-1",
-            "method": "",
-            "params": {},
-        })
+        request_json = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": "req-1",
+                "method": "",
+                "params": {},
+            }
+        )
 
         with pytest.raises(JSONRPCError) as exc_info:
             parse_request(request_json)
@@ -181,12 +199,14 @@ class TestParseRequest:
 
     def test_parse_invalid_params_type(self) -> None:
         """Test handling request with invalid params type (not object/array)."""
-        request_json = json.dumps({
-            "jsonrpc": "2.0",
-            "id": "req-1",
-            "method": "system.get_basic_info",
-            "params": "invalid_string",
-        })
+        request_json = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": "req-1",
+                "method": "system.get_basic_info",
+                "params": "invalid_string",
+            }
+        )
 
         with pytest.raises(JSONRPCError) as exc_info:
             parse_request(request_json)
@@ -242,9 +262,7 @@ class TestFormatSuccessResponse:
 
     def test_format_success_serialization(self) -> None:
         """Test success response serializes to valid JSON."""
-        response = format_success_response(
-            request_id="req-1", result={"key": "value"}
-        )
+        response = format_success_response(request_id="req-1", result={"key": "value"})
 
         json_str = response.to_json()
         parsed = json.loads(json_str)

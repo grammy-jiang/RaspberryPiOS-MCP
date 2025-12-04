@@ -175,7 +175,9 @@ class TestRBACEnforcerPermissions:
         with pytest.raises(PermissionDeniedError, match="Insufficient permissions"):
             rbac_enforcer.check_permission("viewer", "system.reboot")
 
-    def test_check_permission_denied_no_raise(self, rbac_enforcer: RBACEnforcer) -> None:
+    def test_check_permission_denied_no_raise(
+        self, rbac_enforcer: RBACEnforcer
+    ) -> None:
         """Test permission check returns False without raising."""
         result = rbac_enforcer.check_permission(
             "viewer", "system.reboot", raise_on_failure=False
@@ -193,7 +195,9 @@ class TestRBACEnforcerPermissions:
         assert rbac_enforcer.check_permission("admin", "system.get_basic_info") is True
 
         # Operator can access viewer tools
-        assert rbac_enforcer.check_permission("operator", "system.get_basic_info") is True
+        assert (
+            rbac_enforcer.check_permission("operator", "system.get_basic_info") is True
+        )
 
 
 class TestRBACEnforcerContext:
@@ -258,9 +262,7 @@ class TestRequireRoleDecorator:
         """Test decorator allows when role is sufficient."""
 
         @require_role("admin")
-        async def protected_handler(
-            _ctx: ToolContext, _params: dict
-        ) -> dict[str, str]:
+        async def protected_handler(_ctx: ToolContext, _params: dict) -> dict[str, str]:
             return {"status": "ok"}
 
         result = await protected_handler(admin_context, {})
@@ -271,9 +273,7 @@ class TestRequireRoleDecorator:
         """Test decorator raises when role is insufficient."""
 
         @require_role("admin")
-        async def protected_handler(
-            _ctx: ToolContext, _params: dict
-        ) -> dict[str, str]:
+        async def protected_handler(_ctx: ToolContext, _params: dict) -> dict[str, str]:
             return {"status": "ok"}
 
         with pytest.raises(PermissionDeniedError, match="Insufficient permissions"):
@@ -286,9 +286,7 @@ class TestRequireRoleDecorator:
         """Test decorator allows higher role to access lower-level handler."""
 
         @require_role("operator")
-        async def operator_handler(
-            _ctx: ToolContext, _params: dict
-        ) -> dict[str, str]:
+        async def operator_handler(_ctx: ToolContext, _params: dict) -> dict[str, str]:
             return {"status": "ok"}
 
         result = await operator_handler(admin_context, {})

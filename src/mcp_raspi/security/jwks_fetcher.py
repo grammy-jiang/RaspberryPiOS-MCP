@@ -149,9 +149,7 @@ class JWKSFetcher:
 
         # Update cache expiry
         self._cache_expiry = datetime.now(UTC) + self._cache_ttl
-        logger.info(
-            "JWKS refreshed successfully, %d keys cached", len(self._keys)
-        )
+        logger.info("JWKS refreshed successfully, %d keys cached", len(self._keys))
 
     def _parse_jwks(self, jwks_data: dict[str, Any]) -> dict[str, Any]:
         """
@@ -186,13 +184,10 @@ class JWKSFetcher:
                     }
                 else:
                     logger.warning(
-                        "Unsupported key algorithm: %s for kid=%s",
-                        algorithm, kid
+                        "Unsupported key algorithm: %s for kid=%s", algorithm, kid
                     )
             except Exception as e:
-                logger.warning(
-                    "Failed to parse key with kid=%s: %s", kid, str(e)
-                )
+                logger.warning("Failed to parse key with kid=%s: %s", kid, str(e))
                 continue
 
         return keys

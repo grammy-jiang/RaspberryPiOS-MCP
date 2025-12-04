@@ -401,7 +401,9 @@ def create_method_not_found_error(method: str) -> JSONRPCError:
     )
 
 
-def create_internal_error(message: str, details: dict[str, Any] | None = None) -> JSONRPCError:
+def create_internal_error(
+    message: str, details: dict[str, Any] | None = None
+) -> JSONRPCError:
     """
     Create an internal error for unexpected exceptions.
 

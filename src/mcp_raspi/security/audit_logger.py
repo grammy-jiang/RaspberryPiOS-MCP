@@ -286,9 +286,7 @@ class AuditLogger:
 
         return entry
 
-    def _mask_sensitive_fields(
-        self, data: dict[str, Any]
-    ) -> dict[str, Any]:
+    def _mask_sensitive_fields(self, data: dict[str, Any]) -> dict[str, Any]:
         """
         Mask sensitive fields in a dictionary.
 
@@ -318,7 +316,9 @@ class AuditLogger:
                 masked[key] = self._mask_sensitive_fields(value)
             elif isinstance(value, list):
                 masked[key] = [
-                    self._mask_sensitive_fields(item) if isinstance(item, dict) else item
+                    self._mask_sensitive_fields(item)
+                    if isinstance(item, dict)
+                    else item
                     for item in value
                 ]
             else:

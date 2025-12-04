@@ -232,7 +232,11 @@ class TestJWTValidatorValidation:
         """Test error when token missing kid header."""
         private_key, _ = rsa_key_pair
         token = jwt.encode(
-            {"sub": "test", "aud": "test-audience", "iss": "https://test.cloudflareaccess.com"},
+            {
+                "sub": "test",
+                "aud": "test-audience",
+                "iss": "https://test.cloudflareaccess.com",
+            },
             private_key,
             algorithm="RS256",
             # No kid in headers
@@ -517,7 +521,9 @@ class TestAuthProvider:
             local_authenticator=None,
         )
 
-        with pytest.raises(AuthenticationError, match="Local authenticator not configured"):
+        with pytest.raises(
+            AuthenticationError, match="Local authenticator not configured"
+        ):
             await provider.authenticate()
 
 
@@ -538,9 +544,7 @@ class TestJWTValidatorFromConfig:
                 audience="test-aud",
                 issuer="https://test.cloudflareaccess.com",
             ),
-            role_mappings=RoleMappingsConfig(
-                groups_to_roles={"admins": "admin"}
-            ),
+            role_mappings=RoleMappingsConfig(groups_to_roles={"admins": "admin"}),
         )
 
         validator = JWTValidator.from_config(config)

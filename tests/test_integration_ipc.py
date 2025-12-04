@@ -108,7 +108,8 @@ class TestIPCIntegration:
 
                     assert (
                         "unknown.operation" in str(exc_info.value).lower()
-                        or "unknown" in str(exc_info.value.details.get("code", "")).lower()
+                        or "unknown"
+                        in str(exc_info.value.details.get("code", "")).lower()
                     )
             finally:
                 await _stop_agent(agent, agent_task)
