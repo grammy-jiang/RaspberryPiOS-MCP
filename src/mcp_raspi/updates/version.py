@@ -11,6 +11,7 @@ Design follows Doc 10 §5 specifications.
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import os
@@ -350,8 +351,10 @@ class VersionManager:
         Returns:
             Checksum string in format "sha256:<hex>".
         """
+        # Use deepcopy to handle nested mutable objects correctly
+        data_copy = copy.deepcopy(data)
         # Remove checksum field if present
-        data_copy = {k: v for k, v in data.items() if k != "checksum"}
+        data_copy.pop("checksum", None)
         data_json = json.dumps(data_copy, sort_keys=True, separators=(",", ":"))
         hash_hex = hashlib.sha256(data_json.encode()).hexdigest()
         return f"sha256:{hash_hex}"
