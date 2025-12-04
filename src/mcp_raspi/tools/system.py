@@ -120,8 +120,9 @@ def _get_cpu_temperature() -> float | None:
             first_sensor = list(temps.values())[0]
             if first_sensor:
                 return first_sensor[0].current
-    except (AttributeError, KeyError):
-        pass
+    except (AttributeError, KeyError) as e:
+        # psutil.sensors_temperatures() not available or no sensors found; ignore and return None
+        logger.debug("Could not read CPU temperature from psutil: %r", e)
 
     return None
 
