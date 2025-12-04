@@ -103,46 +103,50 @@ async def _execute_power_command(
 
     # If delay is specified, schedule for later
     if delay_seconds > 0:
-        # Use systemd's scheduled shutdown mechanism if available
-        # Otherwise, use asyncio.sleep + subprocess
-        try:
-            # For immediate scheduling with wall message support
-            if operation == "system.reboot":
-                schedule_cmd = ["shutdown", "-r", f"+{delay_seconds // 60 or 1}"]
-            else:
-                schedule_cmd = ["shutdown", "-h", f"+{delay_seconds // 60 or 1}"]
+        if delay_seconds >= 60:
+            # Use systemd's scheduled shutdown mechanism if available (minute granularity)
+            try:
+                minutes = delay_seconds // 60
+                if minutes == 0:
+                    minutes = 1
+                if operation == "system.reboot":
+                    schedule_cmd = ["shutdown", "-r", f"+{minutes}"]
+                else:
+                    schedule_cmd = ["shutdown", "-h", f"+{minutes}"]
 
-            if reason:
-                schedule_cmd.append(reason[:80])
+                if reason:
+                    schedule_cmd.append(reason[:80])
 
-            result = subprocess.run(
-                schedule_cmd,
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-
-            if result.returncode != 0:
-                logger.warning(
-                    f"shutdown command failed, falling back to immediate {operation}",
-                    extra={"stderr": result.stderr},
+                result = subprocess.run(
+                    schedule_cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
                 )
-                # Fall through to immediate execution after delay
-            else:
-                return {
-                    "executed": True,
-                    "method": "scheduled_shutdown",
-                    "scheduled_at": datetime.now(UTC).isoformat(),
-                }
 
-        except FileNotFoundError:
-            logger.info("shutdown command not found, using direct systemctl")
-        except subprocess.TimeoutExpired:
-            logger.warning("shutdown command timed out")
+                if result.returncode != 0:
+                    logger.warning(
+                        f"shutdown command failed, falling back to immediate {operation}",
+                        extra={"stderr": result.stderr},
+                    )
+                    # Fall through to immediate execution after delay
+                else:
+                    return {
+                        "executed": True,
+                        "method": "scheduled_shutdown",
+                        "scheduled_at": datetime.now(UTC).isoformat(),
+                    }
 
-        # Fallback: wait and execute directly
-        await asyncio.sleep(delay_seconds)
+            except FileNotFoundError:
+                logger.info("shutdown command not found, using direct systemctl")
+            except subprocess.TimeoutExpired:
+                logger.warning("shutdown command timed out")
 
+            # Fallback: wait and execute directly
+            await asyncio.sleep(delay_seconds)
+        else:
+            # For sub-minute delays, use asyncio.sleep and direct execution
+            await asyncio.sleep(delay_seconds)
     # Execute the power command
     try:
         result = subprocess.run(
