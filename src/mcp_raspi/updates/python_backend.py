@@ -117,8 +117,13 @@ class PythonPackageBackend(UpdateBackend):
                 process.communicate(),
                 timeout=timeout,
             )
+            if process.returncode is None:
+                raise UnavailableError(
+                    "Process terminated unexpectedly: returncode is None",
+                    details={"command": " ".join(args)},
+                )
             return (
-                process.returncode or 0,
+                process.returncode,
                 stdout.decode("utf-8", errors="replace"),
                 stderr.decode("utf-8", errors="replace"),
             )
