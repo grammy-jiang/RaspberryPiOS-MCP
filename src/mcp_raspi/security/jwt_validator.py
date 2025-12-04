@@ -204,8 +204,9 @@ class JWTValidator:
             try:
                 await self._jwks_fetcher.force_refresh()
                 key_data = self._jwks_fetcher.get_key_by_kid(kid)
-            except Exception:
-                pass
+            except Exception as e:
+                # Log the exception during JWKS refresh; will raise AuthenticationError below if key still not found.
+                logger.error("Exception during JWKS force_refresh: %s", str(e))
 
             if key_data is None:
                 raise AuthenticationError(
