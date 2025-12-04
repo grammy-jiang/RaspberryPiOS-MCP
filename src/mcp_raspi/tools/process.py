@@ -277,8 +277,21 @@ def _get_detailed_process_info(proc: psutil.Process) -> dict[str, Any] | None:
         # We only include non-sensitive environment variables
         try:
             env = proc.environ()
-            # Filter out sensitive variables
-            sensitive_patterns = ["key", "secret", "password", "token", "auth", "credential"]
+            # Filter out sensitive variables using more specific patterns
+            # to avoid false positives like DISPLAY_KEY or KEYBOARD_LAYOUT
+            sensitive_patterns = [
+                "_key",        # API_KEY, SECRET_KEY, etc.
+                "api_key",
+                "apikey",
+                "secret",
+                "password",
+                "passwd",
+                "token",
+                "_auth",       # BASIC_AUTH, etc.
+                "auth_",       # AUTH_TOKEN, etc.
+                "credential",
+                "private",
+            ]
             filtered_env = {
                 k: v
                 for k, v in env.items()

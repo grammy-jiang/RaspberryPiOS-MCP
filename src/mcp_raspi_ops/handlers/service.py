@@ -181,6 +181,39 @@ def _parse_service_status_output(output: str) -> dict[str, Any]:
     return result
 
 
+def _get_all_enabled_states() -> dict[str, str]:
+    """
+    Get enabled states for all services using systemctl list-unit-files.
+
+    This is more efficient than calling is-enabled for each service individually.
+
+    Returns:
+        Dictionary mapping service name to enabled state (enabled/disabled/static/masked).
+    """
+    result = _run_systemctl(["list-unit-files", "--type=service", "--no-pager", "--plain"])
+
+    enabled_states: dict[str, str] = {}
+
+    if result.returncode != 0:
+        logger.warning(
+            "systemctl list-unit-files returned non-zero",
+            extra={"returncode": result.returncode, "stderr": result.stderr},
+        )
+        return enabled_states
+
+    for line in result.stdout.strip().splitlines():
+        if not line.strip() or "unit files listed" in line.lower():
+            continue
+
+        parts = line.split()
+        if len(parts) >= 2:
+            service_name = parts[0]
+            state = parts[1]
+            enabled_states[service_name] = state
+
+    return enabled_states
+
+
 async def handle_service_list_services(request: IPCRequest) -> dict[str, Any]:
     """
     Handle the service.list_services operation.
@@ -226,6 +259,9 @@ async def handle_service_list_services(request: IPCRequest) -> dict[str, Any]:
             extra={"returncode": result.returncode, "stderr": result.stderr},
         )
 
+    # Get all enabled states in one batch call (more efficient than per-service calls)
+    enabled_states = _get_all_enabled_states()
+
     # Parse output
     services = []
     lines = result.stdout.strip().splitlines()
@@ -259,9 +295,8 @@ async def handle_service_list_services(request: IPCRequest) -> dict[str, Any]:
         sub_state = parts[3] if len(parts) > 3 else "unknown"
         description = " ".join(parts[4:]) if len(parts) > 4 else ""
 
-        # Get enabled state separately
-        enabled_result = _run_systemctl(["is-enabled", service_name])
-        enabled = enabled_result.stdout.strip() == "enabled"
+        # Get enabled state from batch result
+        enabled = enabled_states.get(service_name, "") == "enabled"
 
         services.append({
             "name": service_name,
