@@ -280,7 +280,11 @@ All acceptance criteria above must be met for this issue to be considered comple
 
 ---
 
-**Note on Issue Format**: Issue #1 above shows the complete 3-part structure (Title, Description, Custom Prompt). Issues #2-12 below follow a similar detailed format with all the same sections. Each issue can be created following the same process shown in the Quick Start Example above.
+**Note on Issue Format**:
+- **Issues #1-4** have complete custom prompts in this document
+- **Issues #5-12** have detailed specifications below, with custom prompts in [copilot-custom-prompts-issues-5-12.md](copilot-custom-prompts-issues-5-12.md)
+- All issues follow the same 3-part structure (Title, Description, Custom Prompt)
+- Each issue can be created following the process shown in the Quick Start Example above
 
 ---
 
@@ -345,6 +349,111 @@ src/mcp_raspi/
 - Tool context extraction: 1 hour
 - Stub tool implementation: 0.5 hours
 - Testing & debugging: 1.5 hours
+
+#### 🤖 GitHub Copilot Agent Custom Prompt (Use When Assigning)
+
+```
+You are implementing the MCP Server Core & JSON-RPC Protocol for the Raspberry Pi MCP Server project.
+
+CONTEXT:
+- Project: Python 3.11+ MCP server for Raspberry Pi device management
+- This is Issue #2 - building the core MCP server on top of Issue #1's foundation
+- Depends on: Issue #1 (config system, logging, project structure) must be complete
+- Design docs are in docs/ directory - read them thoroughly before coding
+- Standards: TDD, ≥85% test coverage, type hints, docstrings
+- Tools: JSON-RPC 2.0 over stdio, Pydantic for models
+- Time limit: 5-6 hours for this issue
+
+DESIGN DOCUMENTS TO READ:
+- docs/02-raspberry-pi-mcp-server-high-level-architecture-design.md §5 (MCP Server Process)
+- docs/05-mcp-tools-interface-and-json-schema-specification.md §1-2 (Protocol & Error Codes)
+- MCP Specification: https://spec.modelcontextprotocol.io/ (JSON-RPC 2.0 over stdio)
+
+DELIVERABLES:
+1. JSON-RPC 2.0 request parser (validate jsonrpc, id, method, params)
+2. JSON-RPC 2.0 response formatter (success/error responses)
+3. Request routing framework with @tool_handler decorator
+4. Tool registry to register and dispatch handlers
+5. ToolContext extraction from MCP protocol headers
+6. ToolError → JSON-RPC error code mapping (4001-4999 range)
+7. First stub tool: system.get_basic_info returning mock data
+8. Comprehensive unit tests for protocol edge cases
+
+EXPECTED FILE STRUCTURE:
+```python
+src/mcp_raspi/
+  server.py          # MCPServer class, main loop (stdin/stdout)
+  protocol.py        # parse_request(), format_response()
+  routing.py         # ToolRegistry, @tool_handler decorator
+  context.py         # ToolContext dataclass
+  tools/
+    __init__.py
+    system.py        # system.get_basic_info stub
+tests/
+  test_protocol.py   # JSON-RPC parsing/formatting tests
+  test_routing.py    # Tool routing tests
+  test_server.py     # Integration tests
+```
+
+ACCEPTANCE CRITERIA (ALL MUST PASS):
+- Server reads JSON-RPC requests from stdin, writes responses to stdout
+- Valid requests route to correct handler and return success response
+- Invalid requests return proper JSON-RPC error responses
+- ToolError exceptions map to correct error codes (see Doc 05 §2)
+- Malformed JSON handled gracefully with error response
+- system.get_basic_info stub callable and returns expected structure
+- All tests pass with ≥85% coverage
+
+JSON-RPC 2.0 FORMAT (critical):
+Request: {"jsonrpc": "2.0", "id": "req-1", "method": "system.get_basic_info", "params": {}}
+Success: {"jsonrpc": "2.0", "id": "req-1", "result": {...}}
+Error: {"jsonrpc": "2.0", "id": "req-1", "error": {"code": 4003, "message": "Tool not found"}}
+
+ERROR CODE MAPPING (from Doc 05 §2):
+- 4001: Invalid parameters
+- 4002: Permission denied
+- 4003: Tool not found
+- 4004: Resource not found
+- 4005: Operation timeout
+- 4006-4999: Tool-specific errors
+
+DEVELOPMENT PROCESS:
+1. Read all linked design documents first
+2. Write tests FIRST (TDD) - test JSON-RPC parsing before implementing
+3. Implement parse_request() to handle JSON-RPC 2.0 format
+4. Implement format_response() for success/error responses
+5. Create ToolRegistry and @tool_handler decorator pattern
+6. Implement ToolContext extraction from MCP headers
+7. Create stub system.get_basic_info tool as example
+8. Wire up MCPServer main loop (read stdin, parse, route, respond to stdout)
+9. Use Python type hints on ALL functions
+10. Add docstrings for public functions/classes
+11. Run `uv run pytest --cov` - must pass ≥85% coverage
+12. Run `uv run ruff check` - must have zero errors
+
+CRITICAL REQUIREMENTS:
+- JSON-RPC 2.0 spec compliance (jsonrpc field must be "2.0")
+- Handle malformed JSON gracefully (don't crash)
+- Tool registry must support namespace.method format
+- ToolContext must be extractable from request metadata
+- Error codes must match Doc 05 specifications exactly
+
+WHEN COMPLETE:
+- Post implementation summary to this issue
+- Post test coverage report
+- Show example request/response flows working
+- Demonstrate stub tool can be called successfully
+- Mark ready for human review
+
+IF STUCK:
+- Review Doc 05 §1-2 for complete JSON-RPC specifications
+- Check MCP spec for protocol details
+- Test with simple echo tool first before complex routing
+- If approaching 6-hour limit, document progress and stop
+
+SUCCESS CRITERIA:
+All acceptance criteria met. This is the core MCP server - Issue #3 (IPC) and Issue #4 (Security) will build on this foundation.
+```
 
 ---
 
@@ -413,6 +522,113 @@ src/mcp_raspi/
 - Integration testing: 1.5 hours
 - Debugging & edge cases: 0.5 hours
 
+#### 🤖 GitHub Copilot Agent Custom Prompt (Use When Assigning)
+
+```
+You are implementing the Privileged Agent & IPC Communication for the Raspberry Pi MCP Server project.
+
+CONTEXT:
+- Project: Python 3.11+ MCP server for Raspberry Pi device management
+- This is Issue #3 - creating the privileged agent and IPC layer
+- Depends on: Issue #2 (MCP server core) must be complete
+- This enables the MCP server (non-root) to safely execute privileged operations via agent (root)
+- Design docs are in docs/ directory - read them thoroughly
+- Standards: TDD, ≥85% test coverage, type hints, docstrings
+- Tools: Unix domain sockets, JSON over socket protocol, asyncio
+- Time limit: 5-6 hours for this issue
+
+DESIGN DOCUMENTS TO READ:
+- docs/02-raspberry-pi-mcp-server-high-level-architecture-design.md §6 (Privileged Agent)
+- docs/02-raspberry-pi-mcp-server-high-level-architecture-design.md §7 (IPC Protocol)
+- docs/02-raspberry-pi-mcp-server-high-level-architecture-design.md §12 (IPC Robustness)
+
+DELIVERABLES:
+1. Privileged agent process (mcp_raspi_ops) that runs as root
+2. Unix domain socket IPC server in agent (listens on /var/run/mcp-raspi-ops.sock)
+3. JSON request/response protocol over socket
+4. IPC client in MCP server (OpsAgentClient class)
+5. Request forwarding from MCP server → agent for privileged operations
+6. Error propagation from agent → MCP server → JSON-RPC errors
+7. Connection handling: reconnect on disconnect, timeout handling
+8. Test ping command that agent echoes back
+9. Unit tests for IPC protocol, integration tests for full flow
+
+EXPECTED FILE STRUCTURE:
+```python
+src/mcp_raspi_ops/
+  __init__.py
+  agent.py           # Main agent process, Unix socket server
+  handlers.py        # Command handlers (ping, etc.)
+  ipc_protocol.py    # JSON over socket protocol
+src/mcp_raspi/
+  ipc_client.py      # OpsAgentClient class
+tests/
+  test_ipc_protocol.py
+  test_agent.py
+  test_ipc_client.py
+  test_integration_ipc.py
+```
+
+ACCEPTANCE CRITERIA (ALL MUST PASS):
+- Agent starts and listens on Unix socket
+- MCP server connects to agent socket on startup
+- Test ping command works end-to-end (server → agent → server)
+- Agent errors propagate correctly to MCP server
+- Connection failure handled gracefully (retry logic with exponential backoff)
+- Timeout handling prevents hung requests
+- Integration tests validate full MCP → IPC → agent flow
+- All tests pass with ≥85% coverage
+
+IPC PROTOCOL FORMAT:
+Request (server → agent): {"request_id": "uuid-1234", "command": "ping", "params": {}}
+Success (agent → server): {"request_id": "uuid-1234", "status": "success", "result": "pong"}
+Error (agent → server): {"request_id": "uuid-1234", "status": "error", "error_code": 5001, "message": "..."}
+
+DEVELOPMENT PROCESS:
+1. Read all linked design documents first
+2. Start with IPC protocol (ipc_protocol.py) - simple send/receive JSON
+3. Implement agent socket server (agent.py) with ping handler
+4. Implement IPC client (ipc_client.py) in MCP server
+5. Add connection handling: retry logic, timeouts, reconnection
+6. Add error propagation from agent → server
+7. Write comprehensive tests (unit + integration)
+8. Test on Unix domain socket (can use /tmp for testing)
+9. Use Python type hints and docstrings
+10. Run `uv run pytest --cov` - must pass ≥85% coverage
+11. Run `uv run ruff check` - zero errors
+
+CRITICAL REQUIREMENTS:
+- Unix socket at /var/run/mcp-raspi-ops.sock (or configurable path)
+- JSON protocol must handle large responses (chunking if needed)
+- Request IDs must be unique (use UUID)
+- Connection must auto-reconnect on failure
+- Timeouts prevent hung requests (default 30s)
+- Agent errors must propagate to MCP server correctly
+
+SECURITY NOTE (from design docs):
+- Agent runs as root/privileged user
+- MCP server runs as non-privileged user
+- IPC is the security boundary
+- Agent must validate all commands before executing
+- Socket permissions: 0600, owned by agent user
+
+WHEN COMPLETE:
+- Post implementation summary to this issue
+- Post test coverage report
+- Demonstrate ping command working end-to-end
+- Show connection retry logic working
+- Mark ready for human review
+
+IF STUCK:
+- Review Doc 02 §6-7 for complete IPC specifications
+- Start with simplest ping/pong implementation
+- Test agent and client independently before integrating
+- If approaching 6-hour limit, document progress and stop
+
+SUCCESS CRITERIA:
+All acceptance criteria met. This IPC layer is critical - Issue #4 (Security) and all future tools will use it to execute privileged operations safely.
+```
+
 ---
 
 ### Issue #4: Security Foundation - OAuth, RBAC & Audit Logging
@@ -471,6 +687,122 @@ src/mcp_raspi/
 - Local auth mode: 0.5 hours
 - Configuration integration: 0.5 hours
 - Testing (mocked endpoints): 1.5 hours
+
+#### 🤖 GitHub Copilot Agent Custom Prompt (Use When Assigning)
+
+```
+You are implementing the Security Foundation (OAuth, RBAC & Audit Logging) for the Raspberry Pi MCP Server project.
+
+CONTEXT:
+- Project: Python 3.11+ MCP server for Raspberry Pi device management
+- This is Issue #4 - implementing authentication, authorization, and audit logging
+- Depends on: Issue #3 (IPC layer) must be complete
+- This is CRITICAL for production security - all tools depend on this
+- Design docs are in docs/ directory - read thoroughly
+- Standards: TDD, ≥85% test coverage, type hints, security best practices
+- Tools: JWT (PyJWT), JWKS, Pydantic, structured logging
+- Time limit: 6 hours for this issue
+
+DESIGN DOCUMENTS TO READ:
+- docs/04-security-oauth-integration-and-access-control-design.md (COMPLETE security design)
+- docs/05-mcp-tools-interface-and-json-schema-specification.md §1.3 (ToolContext)
+- docs/09-logging-observability-and-diagnostics-design.md §4 (Audit Logging)
+
+DELIVERABLES:
+1. JWT validation: extract from MCP headers, verify signature via JWKS
+2. JWKS fetching: download and cache Cloudflare's public keys
+3. RBAC roles: viewer, operator, admin with @require_role decorator
+4. ToolContext population: user_id, email, roles from JWT claims
+5. Policy enforcement: check role requirements before tool execution
+6. Audit logging: structured logs for all privileged operations
+7. Local auth mode: static token or permissive mode for dev/testing
+8. Configuration: auth_mode (cloudflare|local), JWKS URL, allowed roles
+9. Unit tests with mocked JWT/JWKS endpoints
+
+EXPECTED FILE STRUCTURE:
+```python
+src/mcp_raspi/security/
+  __init__.py
+  jwt_validator.py      # JWTValidator class
+  jwks_fetcher.py       # JWKSFetcher class, caching logic
+  rbac.py               # @require_role decorator, role checks
+  audit_logger.py       # AuditLogger class
+tests/
+  test_jwt_validator.py
+  test_jwks_fetcher.py
+  test_rbac.py
+  test_audit_logger.py
+```
+
+ACCEPTANCE CRITERIA (ALL MUST PASS):
+- Valid Cloudflare JWT authenticates user and extracts roles
+- Invalid/expired JWT rejected with proper error (4002 Permission denied)
+- Tools enforce role requirements (e.g., admin only for reboot)
+- Audit logs contain: timestamp, user, action, result, parameters
+- Local auth mode bypasses JWT validation (for dev/testing)
+- JWKS keys cached and refreshed on expiry
+- All tests pass with mocked JWT/JWKS endpoints
+- Test coverage ≥85% on security module
+
+ROLE PERMISSIONS (from Doc 04 §5):
+- viewer: Read-only (system.get_*, metrics.query, logs.get_*)
+- operator: viewer + device control (gpio.*, i2c.*, service.control_service)
+- admin: Full access (system.reboot, system.shutdown, manage.update_server)
+
+JWT CLAIMS MAPPING:
+- sub → user_id
+- email → email
+- groups/roles → roles (array of strings)
+
+DEVELOPMENT PROCESS:
+1. Read Doc 04 completely - security is critical
+2. Implement JWTValidator with PyJWT library
+3. Implement JWKSFetcher with caching (TTL from JWKS header)
+4. Create @require_role decorator for RBAC
+5. Implement AuditLogger with structured JSON logging
+6. Add local auth mode for development
+7. Integrate with ToolContext (from Issue #2)
+8. Write comprehensive tests with mocked JWT/JWKS
+9. Test invalid tokens, expired tokens, missing roles
+10. Run `uv run pytest --cov` - must pass ≥85% coverage
+11. Run `uv run ruff check` - zero errors
+
+CRITICAL SECURITY REQUIREMENTS:
+- MUST verify JWT signature using JWKS public keys
+- MUST check token expiration (exp claim)
+- MUST validate issuer (iss claim) matches Cloudflare
+- MUST reject tokens without required roles
+- Audit logs MUST be tamper-evident (append-only)
+- NEVER log sensitive data (tokens, passwords) in audit logs
+- Local auth mode ONLY for development, NEVER in production
+
+AUDIT LOG FORMAT (JSON):
+{
+  "timestamp": "2025-01-15T14:30:00Z",
+  "user_id": "user@example.com",
+  "action": "system.reboot",
+  "result": "success|failure",
+  "params": {...},
+  "role": "admin"
+}
+
+WHEN COMPLETE:
+- Post implementation summary to this issue
+- Post test coverage report
+- Demonstrate JWT validation working with mock tokens
+- Show RBAC enforcement working
+- Show audit logs being generated
+- Mark ready for human review
+
+IF STUCK:
+- Review Doc 04 for complete security specifications
+- Start with simplest JWT validation first
+- Mock JWKS endpoint in tests
+- If approaching 6-hour limit, document progress and stop
+
+SUCCESS CRITERIA:
+All acceptance criteria met. This security foundation is CRITICAL - all future issues depend on proper authentication and authorization.
+```
 
 ---
 
