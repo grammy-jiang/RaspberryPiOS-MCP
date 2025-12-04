@@ -10,7 +10,6 @@ Tests cover:
 
 from __future__ import annotations
 
-import asyncio
 import tempfile
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -22,7 +21,6 @@ from mcp_raspi.updates.health_check import (
     HealthCheckResult,
     wait_for_service_healthy,
 )
-
 
 # =============================================================================
 # HealthCheckResult Tests
@@ -119,7 +117,7 @@ class TestCheckServiceRunning:
         """Test checking an active service."""
         checker = HealthChecker()
 
-        async def mock_subprocess(*args, **kwargs):
+        async def mock_subprocess(*_args, **_kwargs):
             proc = MagicMock()
             proc.returncode = 0
             proc.communicate = AsyncMock(return_value=(b"active", b""))
@@ -136,7 +134,7 @@ class TestCheckServiceRunning:
         """Test checking an inactive service."""
         checker = HealthChecker()
 
-        async def mock_subprocess(*args, **kwargs):
+        async def mock_subprocess(*_args, **_kwargs):
             proc = MagicMock()
             proc.returncode = 1
             proc.communicate = AsyncMock(return_value=(b"inactive", b""))
@@ -168,9 +166,9 @@ class TestCheckServiceRunning:
         """Test handling of check timeout."""
         checker = HealthChecker()
 
-        async def slow_subprocess(*args, **kwargs):
+        async def slow_subprocess(*_args, **_kwargs):
             proc = MagicMock()
-            proc.communicate = AsyncMock(side_effect=asyncio.TimeoutError())
+            proc.communicate = AsyncMock(side_effect=TimeoutError())
             return proc
 
         with patch("asyncio.create_subprocess_exec", side_effect=slow_subprocess):
@@ -529,7 +527,7 @@ class TestWaitForServiceHealthy:
         """Test that wait retries until service becomes active."""
         call_count = 0
 
-        async def mock_check(*args, **kwargs):
+        async def mock_check(*_args, **_kwargs):
             nonlocal call_count
             call_count += 1
             if call_count < 3:

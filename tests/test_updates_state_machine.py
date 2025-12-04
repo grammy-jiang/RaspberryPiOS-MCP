@@ -22,12 +22,11 @@ import pytest
 from mcp_raspi.errors import FailedPreconditionError, InvalidArgumentError
 from mcp_raspi.updates.backends import PreparedUpdate
 from mcp_raspi.updates.state_machine import (
+    _VALID_TRANSITIONS,
     UpdateState,
     UpdateStateData,
     UpdateStateMachine,
-    _VALID_TRANSITIONS,
 )
-
 
 # =============================================================================
 # UpdateState Tests

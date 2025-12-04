@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -24,7 +24,6 @@ from mcp_raspi.updates.rollback import (
     perform_rollback,
 )
 from mcp_raspi.updates.version import VersionManager
-
 
 # =============================================================================
 # perform_rollback Tests
