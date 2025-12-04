@@ -83,6 +83,7 @@ def _get_os_info() -> tuple[str, str]:
                 elif line.startswith("VERSION="):
                     os_version = line.split("=", 1)[1].strip().strip('"')
     except (OSError, PermissionError):
+        # Ignore errors reading /etc/os-release; fall back to platform info.
         pass
 
     return os_name, os_version
