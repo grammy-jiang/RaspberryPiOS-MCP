@@ -220,8 +220,16 @@ class PythonPackageBackend(UpdateBackend):
 
         # Filter by channel
         if channel == "stable":
-            versions = [v for v in versions if "-" not in v]
-
+            filtered_versions = []
+            for v in versions:
+                try:
+                    parsed = parse_semantic_version(v)
+                    # Only include versions with no prerelease part
+                    if not getattr(parsed, "prerelease", None):
+                        filtered_versions.append(v)
+                except InvalidArgumentError:
+                    continue
+            versions = filtered_versions
         # Validate and sort versions
         valid_versions = []
         for v in versions:
