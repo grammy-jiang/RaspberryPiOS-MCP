@@ -5,9 +5,8 @@ This module provides time-series metrics collection, storage, and querying
 capabilities with SQLite persistence.
 
 Components:
-- storage: SQLite storage layer for metrics persistence
+- storage: SQLite storage and query logic for metrics persistence and aggregation
 - sampler: Background sampling job using asyncio
-- query: Query logic with aggregation functions
 """
 
 from mcp_raspi.metrics.sampler import MetricsSampler
