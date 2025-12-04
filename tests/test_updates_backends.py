@@ -206,7 +206,7 @@ class TestPythonPackageBackendPrepare:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             backend.staging_dir = Path(tmpdir)
-            # The staging path that will be created by prepare()
+            # The staging path that the test sets up to simulate what prepare() would create
             staging_path = Path(tmpdir) / "mcp-raspi-1.0.0"
 
             async def mock_run_with_side_effect(
