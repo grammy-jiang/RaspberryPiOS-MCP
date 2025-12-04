@@ -405,7 +405,7 @@ class TestPythonPackageBackendRunCommand:
         backend = PythonPackageBackend()
 
         with pytest.raises(UnavailableError) as exc_info:
-            await backend._run_command("sleep", "10", timeout=0.1)
+            await backend._run_command("sleep", "5", timeout=1.0)
 
         assert "timed out" in exc_info.value.message.lower()
 
