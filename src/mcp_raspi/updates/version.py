@@ -438,7 +438,8 @@ class VersionManager:
         if not self._verify_checksum(data):
             raise ValueError(f"Checksum verification failed for {path}")
 
-        # Create VersionInfo from data
+        # Remove checksum before creating VersionInfo
+        data.pop("checksum", None)
         version_info = VersionInfo(**data)
         self._version_info = version_info
 
