@@ -362,9 +362,10 @@ def _read_audit_log_file(
                 try:
                     entry_time = datetime.fromisoformat(entry_ts.replace("Z", "+00:00"))
 
+                    # start_time is inclusive, end_time is exclusive
                     if start_dt is not None and entry_time < start_dt:
                         continue
-                    if end_dt is not None and entry_time > end_dt:
+                    if end_dt is not None and entry_time >= end_dt:
                         continue
                 except (ValueError, AttributeError):
                     pass
