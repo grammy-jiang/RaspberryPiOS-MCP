@@ -297,9 +297,7 @@ class TestCameraTakePhoto:
     ) -> None:
         """Test that viewer role is denied."""
         with pytest.raises(PermissionDeniedError):
-            await handle_camera_take_photo(
-                viewer_ctx, {}, config=full_sandbox_config
-            )
+            await handle_camera_take_photo(viewer_ctx, {}, config=full_sandbox_config)
 
     @pytest.mark.asyncio
     async def test_operator_allowed(
@@ -466,9 +464,7 @@ class TestCameraTakePhoto:
 
         # Third should be rate limited
         with pytest.raises(FailedPreconditionError) as exc_info:
-            await handle_camera_take_photo(
-                operator_ctx, {}, config=full_sandbox_config
-            )
+            await handle_camera_take_photo(operator_ctx, {}, config=full_sandbox_config)
         assert "Rate limit exceeded" in str(exc_info.value)
 
     @pytest.mark.asyncio

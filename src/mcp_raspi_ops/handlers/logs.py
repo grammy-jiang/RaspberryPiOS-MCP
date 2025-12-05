@@ -95,9 +95,7 @@ def _read_log_file(
             entry_ts = entry.get("timestamp")
             if entry_ts and (start_dt or end_dt):
                 try:
-                    entry_time = datetime.fromisoformat(
-                        entry_ts.replace("Z", "+00:00")
-                    )
+                    entry_time = datetime.fromisoformat(entry_ts.replace("Z", "+00:00"))
 
                     # start_time is inclusive, end_time is exclusive
                     if start_dt is not None and entry_time < start_dt:
@@ -362,9 +360,7 @@ def _read_audit_log_file(
             entry_ts = entry.get("timestamp")
             if entry_ts and (start_dt or end_dt):
                 try:
-                    entry_time = datetime.fromisoformat(
-                        entry_ts.replace("Z", "+00:00")
-                    )
+                    entry_time = datetime.fromisoformat(entry_ts.replace("Z", "+00:00"))
 
                     if start_dt is not None and entry_time < start_dt:
                         continue

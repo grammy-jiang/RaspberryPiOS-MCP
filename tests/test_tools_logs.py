@@ -458,9 +458,7 @@ class TestLogsGetRecentAppLogs:
         config = AppConfig()
         config.logging = LoggingConfig(app_log_path=str(empty_log))
 
-        result = await handle_logs_get_recent_app_logs(
-            viewer_ctx, {}, config=config
-        )
+        result = await handle_logs_get_recent_app_logs(viewer_ctx, {}, config=config)
 
         assert result["entries"] == []
         assert result["total_count"] == 0
@@ -475,9 +473,7 @@ class TestLogsGetRecentAppLogs:
             app_log_path=str(temp_log_dir / "nonexistent.log")
         )
 
-        result = await handle_logs_get_recent_app_logs(
-            viewer_ctx, {}, config=config
-        )
+        result = await handle_logs_get_recent_app_logs(viewer_ctx, {}, config=config)
 
         assert result["entries"] == []
         assert result["total_count"] == 0

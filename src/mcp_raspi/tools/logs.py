@@ -49,12 +49,30 @@ MAX_TIME_RANGE_DAYS = 30
 
 # Sensitive data patterns for masking
 SENSITIVE_PATTERNS = [
-    (re.compile(r"(api[_-]?key)\s*[=:]\s*['\"]?[\w\-]+['\"]?", re.IGNORECASE), r"\1=***REDACTED***"),
-    (re.compile(r"(token)\s*[=:]\s*['\"]?[\w\-._]+['\"]?", re.IGNORECASE), r"\1=***REDACTED***"),
-    (re.compile(r"(password)\s*[=:]\s*['\"]?[^\s'\"]+['\"]?", re.IGNORECASE), r"\1=***REDACTED***"),
-    (re.compile(r"(secret)\s*[=:]\s*['\"]?[\w\-._]+['\"]?", re.IGNORECASE), r"\1=***REDACTED***"),
-    (re.compile(r"(credential)\s*[=:]\s*['\"]?[\w\-._]+['\"]?", re.IGNORECASE), r"\1=***REDACTED***"),
-    (re.compile(r"(private[_-]?key)\s*[=:]\s*['\"]?[\w\-._]+['\"]?", re.IGNORECASE), r"\1=***REDACTED***"),
+    (
+        re.compile(r"(api[_-]?key)\s*[=:]\s*['\"]?[\w\-]+['\"]?", re.IGNORECASE),
+        r"\1=***REDACTED***",
+    ),
+    (
+        re.compile(r"(token)\s*[=:]\s*['\"]?[\w\-._]+['\"]?", re.IGNORECASE),
+        r"\1=***REDACTED***",
+    ),
+    (
+        re.compile(r"(password)\s*[=:]\s*['\"]?[^\s'\"]+['\"]?", re.IGNORECASE),
+        r"\1=***REDACTED***",
+    ),
+    (
+        re.compile(r"(secret)\s*[=:]\s*['\"]?[\w\-._]+['\"]?", re.IGNORECASE),
+        r"\1=***REDACTED***",
+    ),
+    (
+        re.compile(r"(credential)\s*[=:]\s*['\"]?[\w\-._]+['\"]?", re.IGNORECASE),
+        r"\1=***REDACTED***",
+    ),
+    (
+        re.compile(r"(private[_-]?key)\s*[=:]\s*['\"]?[\w\-._]+['\"]?", re.IGNORECASE),
+        r"\1=***REDACTED***",
+    ),
     (re.compile(r"(bearer)\s+[\w\-._]+", re.IGNORECASE), r"\1 ***REDACTED***"),
 ]
 
@@ -122,8 +140,10 @@ def mask_sensitive_dict(data: dict[str, Any]) -> dict[str, Any]:
             masked[key] = mask_sensitive_dict(value)
         elif isinstance(value, list):
             masked[key] = [
-                mask_sensitive_dict(item) if isinstance(item, dict)
-                else mask_sensitive_string(str(item)) if isinstance(item, str)
+                mask_sensitive_dict(item)
+                if isinstance(item, dict)
+                else mask_sensitive_string(str(item))
+                if isinstance(item, str)
                 else item
                 for item in value
             ]
@@ -358,9 +378,7 @@ def _read_log_entries(
             entry_ts = entry.get("timestamp")
             if entry_ts:
                 try:
-                    entry_time = datetime.fromisoformat(
-                        entry_ts.replace("Z", "+00:00")
-                    )
+                    entry_time = datetime.fromisoformat(entry_ts.replace("Z", "+00:00"))
 
                     # start_time is inclusive, end_time is exclusive
                     if start_time is not None and entry_time < start_time:
@@ -684,9 +702,7 @@ def _read_audit_log_entries(
             entry_ts = entry.get("timestamp")
             if entry_ts:
                 try:
-                    entry_time = datetime.fromisoformat(
-                        entry_ts.replace("Z", "+00:00")
-                    )
+                    entry_time = datetime.fromisoformat(entry_ts.replace("Z", "+00:00"))
 
                     # start_time is inclusive, end_time is exclusive
                     if start_time is not None and entry_time < start_time:
