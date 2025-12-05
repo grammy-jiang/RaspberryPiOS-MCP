@@ -25,7 +25,6 @@ from mcp_raspi_ops.handlers.logs import (
 )
 from mcp_raspi_ops.handlers_core import HandlerRegistry
 
-
 # =============================================================================
 # Test Fixtures
 # =============================================================================

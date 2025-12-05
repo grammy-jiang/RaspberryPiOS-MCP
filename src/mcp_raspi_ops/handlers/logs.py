@@ -12,6 +12,7 @@ Design follows Doc 09 §5 (Log query).
 
 from __future__ import annotations
 
+import contextlib
 import json
 from datetime import datetime
 from pathlib import Path
@@ -59,15 +60,11 @@ def _read_log_file(
     start_dt = None
     end_dt = None
     if start_time:
-        try:
+        with contextlib.suppress(ValueError):
             start_dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
-        except ValueError:
-            pass
     if end_time:
-        try:
+        with contextlib.suppress(ValueError):
             end_dt = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
-        except ValueError:
-            pass
 
     entries: list[dict[str, Any]] = []
     total_matching = 0
@@ -98,13 +95,12 @@ def _read_log_file(
             entry_ts = entry.get("timestamp")
             if entry_ts and (start_dt or end_dt):
                 try:
-                    entry_time = datetime.fromisoformat(
-                        entry_ts.replace("Z", "+00:00")
-                    )
+                    entry_time = datetime.fromisoformat(entry_ts.replace("Z", "+00:00"))
 
+                    # start_time is inclusive, end_time is exclusive
                     if start_dt is not None and entry_time < start_dt:
                         continue
-                    if end_dt is not None and entry_time > end_dt:
+                    if end_dt is not None and entry_time >= end_dt:
                         continue
                 except (ValueError, AttributeError):
                     pass
@@ -330,15 +326,11 @@ def _read_audit_log_file(
     start_dt = None
     end_dt = None
     if start_time:
-        try:
+        with contextlib.suppress(ValueError):
             start_dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
-        except ValueError:
-            pass
     if end_time:
-        try:
+        with contextlib.suppress(ValueError):
             end_dt = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
-        except ValueError:
-            pass
 
     entries: list[dict[str, Any]] = []
     total_matching = 0
@@ -368,13 +360,12 @@ def _read_audit_log_file(
             entry_ts = entry.get("timestamp")
             if entry_ts and (start_dt or end_dt):
                 try:
-                    entry_time = datetime.fromisoformat(
-                        entry_ts.replace("Z", "+00:00")
-                    )
+                    entry_time = datetime.fromisoformat(entry_ts.replace("Z", "+00:00"))
 
+                    # start_time is inclusive, end_time is exclusive
                     if start_dt is not None and entry_time < start_dt:
                         continue
-                    if end_dt is not None and entry_time > end_dt:
+                    if end_dt is not None and entry_time >= end_dt:
                         continue
                 except (ValueError, AttributeError):
                     pass

@@ -1,0 +1,79 @@
+# MCP Raspi Server systemd service unit
+# Raspberry Pi MCP Server - Non-privileged MCP server process
+#
+# This service runs the main MCP server that handles JSON-RPC requests
+# from clients (AI assistants). It runs as a non-privileged user and
+# communicates with the privileged ops agent via Unix socket IPC.
+#
+# Installation:
+#   sudo cp mcp-raspi-server.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable mcp-raspi-server
+#   sudo systemctl start mcp-raspi-server
+#
+# Logs:
+#   journalctl -u mcp-raspi-server -f
+#   tail -f /var/log/mcp-raspi/server.log
+#
+# See docs/12-deployment-systemd-integration-and-operations-runbook.md for details
+
+[Unit]
+Description=Raspberry Pi MCP Server
+Documentation=https://github.com/grammy-jiang/RaspberryPiOS-MCP
+After=network-online.target raspi-ops-agent.service
+Wants=network-online.target
+Requires=raspi-ops-agent.service
+
+[Service]
+Type=simple
+User=mcp-raspi
+Group=mcp-raspi
+
+# Working directory and executable
+WorkingDirectory=/opt/mcp-raspi/current
+ExecStart=/opt/mcp-raspi/current/venv/bin/python -m mcp_raspi.server --config /etc/mcp-raspi/config.yml
+
+# Environment
+EnvironmentFile=-/etc/mcp-raspi/secrets.env
+
+# Restart policy
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=30
+TimeoutStopSec=30
+
+# Security hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+PrivateDevices=yes
+
+# Allow read/write to specific paths
+ReadWritePaths=/var/log/mcp-raspi
+ReadWritePaths=/var/lib/mcp-raspi
+ReadOnlyPaths=/etc/mcp-raspi
+ReadOnlyPaths=/opt/mcp-raspi
+
+# Allow access to IPC socket directory
+ReadWritePaths=/run/mcp-raspi
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mcp-raspi-server
+
+# Resource limits (adjust for your Pi model)
+# Pi 3: MemoryMax=150M
+# Pi 4 (2GB): MemoryMax=200M
+# Pi 4 (4GB+): MemoryMax=250M
+MemoryMax=250M
+MemoryHigh=200M
+
+[Install]
+WantedBy=multi-user.target

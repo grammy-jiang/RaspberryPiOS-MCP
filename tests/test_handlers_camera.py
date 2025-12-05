@@ -27,7 +27,6 @@ from mcp_raspi_ops.handlers.camera import (
 )
 from mcp_raspi_ops.handlers_core import HandlerError, HandlerRegistry
 
-
 # =============================================================================
 # Test Fixtures
 # =============================================================================
@@ -131,10 +130,12 @@ class TestCameraDetection:
 
     def test_detect_no_camera(self) -> None:
         """Test detection when no camera available."""
-        with patch.dict("sys.modules", {"picamera2": None}):
-            with patch.object(Path, "glob", return_value=[]):
-                result = _detect_camera_info()
-                assert result["detected"] is False
+        with (
+            patch.dict("sys.modules", {"picamera2": None}),
+            patch.object(Path, "glob", return_value=[]),
+        ):
+            result = _detect_camera_info()
+            assert result["detected"] is False
 
 
 # =============================================================================
@@ -306,8 +307,6 @@ class TestCameraCaptureHandler:
         # Reset rate limiter with low limit
         _agent_rate_limiter._timestamps.clear()
         _agent_rate_limiter.set_limit(2)
-
-        output_path = temp_media_dir / "photos" / "test.jpg"
 
         # First two should succeed
         for i in range(2):

@@ -1,6 +1,63 @@
 # RaspberryPiOS-MCP
 
-Design and documentation for a future **Raspberry Pi MCP Server** that will manage and observe Raspberry Pi OS devices, with a focus on safe device control, self‑monitoring, and secure internet exposure via Cloudflare + OAuth.
+A **Raspberry Pi MCP Server** that enables AI assistants to manage and observe Raspberry Pi OS devices through the Model Context Protocol (MCP), with safe device control, system monitoring, and secure internet exposure via Cloudflare + OAuth.
+
+## 🚀 Quick Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/grammy-jiang/RaspberryPiOS-MCP.git
+cd RaspberryPiOS-MCP
+
+# Run the installer (requires sudo)
+sudo ./deployment/install.sh
+
+# Check service status
+sudo systemctl status mcp-raspi-server
+```
+
+For detailed instructions, see the [Getting Started Guide](docs/getting-started.md).
+
+## Features
+
+- **System Monitoring**: CPU, memory, disk, temperature metrics
+- **GPIO Control**: Read/write GPIO pins for electronics projects
+- **I2C Communication**: Interface with I2C devices (sensors, displays)
+- **Camera Capture**: Take photos with Raspberry Pi Camera
+- **Service Management**: Start/stop/restart systemd services
+- **Process Management**: List and manage system processes
+- **Secure Access**: Cloudflare Tunnel + OAuth authentication
+- **Self-Update**: Remote updates with automatic rollback
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      AI Assistant (Claude, etc.)                 │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                    MCP Protocol (JSON-RPC 2.0)
+                                │
+                    [Cloudflare Tunnel + Access]
+                                │
+┌─────────────────────────────────────────────────────────────────┐
+│                    mcp-raspi-server                              │
+│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────────┐  │
+│  │   JWT/Auth  │  │  MCP Router  │  │     Tool Handlers      │  │
+│  │  Validator  │  │   & RBAC     │  │  (system, metrics, ...) │  │
+│  └─────────────┘  └──────────────┘  └────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                    Unix Socket IPC (restricted)
+                                │
+┌─────────────────────────────────────────────────────────────────┐
+│                     raspi-ops-agent (privileged)                 │
+│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────────┐  │
+│  │    GPIO     │  │     I2C      │  │   System Control       │  │
+│  │   Control   │  │  Interface   │  │  (reboot, services)    │  │
+│  └─────────────┘  └──────────────┘  └────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ## Documentation
 
@@ -45,6 +102,10 @@ The full design is captured in the numbered specs under `docs/` (recommended rea
 
 ### Navigation & Planning Documents
 
+- **[`docs/getting-started.md`](docs/getting-started.md)** – Installation and quick start guide
+- **[`docs/operations-runbook.md`](docs/operations-runbook.md)** – Day-to-day operations procedures
+- **[`docs/troubleshooting.md`](docs/troubleshooting.md)** – Common issues and solutions
+- **[`docs/cloudflare-tunnel-setup.md`](docs/cloudflare-tunnel-setup.md)** – Secure internet access setup
 - **[`docs/00-executive-summary.md`](docs/00-executive-summary.md)** – 2-page executive overview (5-7 min read)
 - **[`docs/quick-start-guide.md`](docs/quick-start-guide.md)** – Get started in 10 minutes (all roles)
 - **[`docs/document-navigator.md`](docs/document-navigator.md)** – Reading paths, dependencies, reference matrix
@@ -93,11 +154,57 @@ The full design is captured in the numbered specs under `docs/` (recommended rea
     └── acceptance-checklist.md
 ```
 
-**Total**: 20 documentation files, 250+ pages, 10-12 hours comprehensive study, implementation-ready specifications.
+**Total**: 24 documentation files, 250+ pages, 10-12 hours comprehensive study, implementation-ready specifications.
 
 **Documentation Quality**: Professional-grade, comprehensive specifications with 9.6/10 quality rating. All content has been consolidated for easy navigation with consistent terminology, accurate cross-references, and implementation-ready detail.
 
-This repository currently contains **documentation only**; implementation work (Python MCP server, privileged agent, systemd units, etc.) should follow these specs. The design is intended to be implementation-ready: interfaces, models, workflows and error handling are fully specified in the docs above.
+## Deployment Files
+
+The `deployment/` directory contains production-ready deployment artifacts:
+
+```
+deployment/
+├── systemd/
+│   ├── mcp-raspi-server.service    # MCP server systemd unit
+│   └── raspi-ops-agent.service     # Privileged agent systemd unit
+├── install.sh                       # Automated installation script
+├── uninstall.sh                     # Clean uninstallation script
+└── config.example.yml               # Configuration template
+```
+
+### Systemd Services
+
+Two services work together:
+- **mcp-raspi-server**: Non-privileged MCP server handling client requests
+- **raspi-ops-agent**: Privileged agent for hardware/OS operations
+
+### Installation Script
+
+```bash
+# Preview installation (dry run)
+sudo ./deployment/install.sh --dry-run
+
+# Install with defaults
+sudo ./deployment/install.sh
+
+# Install specific version
+sudo ./deployment/install.sh --version 1.0.0
+```
+
+### Uninstallation
+
+```bash
+# Standard uninstall
+sudo ./deployment/uninstall.sh
+
+# Keep configuration
+sudo ./deployment/uninstall.sh --keep-config
+
+# Complete removal
+sudo ./deployment/uninstall.sh --purge
+```
+
+This repository contains both **documentation and implementation**; all core MCP server functionality, privileged agent, systemd units, and deployment scripts are ready for use.
 
 ## AI-Assisted Development
 
