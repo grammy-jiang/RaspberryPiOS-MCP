@@ -14,9 +14,8 @@ This test module validates:
 from __future__ import annotations
 
 import tempfile
-import time
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -37,7 +36,6 @@ from mcp_raspi.tools.camera import (
     handle_camera_get_info,
     handle_camera_take_photo,
 )
-
 
 # =============================================================================
 # Test Fixtures
@@ -192,21 +190,25 @@ class TestCameraDetection:
     def test_detect_camera_no_hardware(self) -> None:
         """Test detection when no camera hardware available."""
         # Mock picamera2 import to fail
-        with patch.dict("sys.modules", {"picamera2": None}):
-            with patch("mcp_raspi.tools.camera.Path.glob", return_value=[]):
-                result = _detect_camera()
-                assert result["detected"] is False
+        with (
+            patch.dict("sys.modules", {"picamera2": None}),
+            patch("mcp_raspi.tools.camera.Path.glob", return_value=[]),
+        ):
+            result = _detect_camera()
+            assert result["detected"] is False
 
     def test_detect_camera_v4l2_devices(self) -> None:
         """Test detection of V4L2 devices."""
         # Mock picamera2 to fail but V4L2 devices exist
         mock_devices = [Path("/dev/video0"), Path("/dev/video1")]
 
-        with patch.dict("sys.modules", {"picamera2": None}):
-            with patch.object(Path, "glob", return_value=mock_devices):
-                result = _detect_camera()
-                # May or may not detect based on actual system
-                assert "detected" in result
+        with (
+            patch.dict("sys.modules", {"picamera2": None}),
+            patch.object(Path, "glob", return_value=mock_devices),
+        ):
+            result = _detect_camera()
+            # May or may not detect based on actual system
+            assert "detected" in result
 
 
 # =============================================================================

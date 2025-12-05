@@ -362,9 +362,10 @@ def _read_log_entries(
                         entry_ts.replace("Z", "+00:00")
                     )
 
+                    # start_time is inclusive, end_time is exclusive
                     if start_time is not None and entry_time < start_time:
                         continue
-                    if end_time is not None and entry_time > end_time:
+                    if end_time is not None and entry_time >= end_time:
                         continue
                 except (ValueError, AttributeError):
                     # Skip entries with invalid timestamps
@@ -687,9 +688,10 @@ def _read_audit_log_entries(
                         entry_ts.replace("Z", "+00:00")
                     )
 
+                    # start_time is inclusive, end_time is exclusive
                     if start_time is not None and entry_time < start_time:
                         continue
-                    if end_time is not None and entry_time > end_time:
+                    if end_time is not None and entry_time >= end_time:
                         continue
                 except (ValueError, AttributeError):
                     pass

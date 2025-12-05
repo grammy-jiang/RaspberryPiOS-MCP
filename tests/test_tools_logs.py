@@ -15,9 +15,7 @@ from __future__ import annotations
 
 import json
 import tempfile
-from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -34,7 +32,6 @@ from mcp_raspi.tools.logs import (
     mask_sensitive_dict,
     mask_sensitive_string,
 )
-
 
 # =============================================================================
 # Test Fixtures
@@ -167,7 +164,11 @@ def sample_audit_logs(temp_log_dir: Path) -> Path:
 
 
 @pytest.fixture
-def config_with_logs(temp_log_dir: Path, sample_app_logs: Path, sample_audit_logs: Path) -> AppConfig:
+def config_with_logs(
+    temp_log_dir: Path,  # noqa: ARG001
+    sample_app_logs: Path,
+    sample_audit_logs: Path,
+) -> AppConfig:
     """Create config with log paths."""
     config = AppConfig()
     config.logging = LoggingConfig(

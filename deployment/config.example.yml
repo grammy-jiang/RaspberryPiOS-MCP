@@ -1,0 +1,289 @@
+# =============================================================================
+# MCP Raspi Server Configuration Template
+# =============================================================================
+#
+# This is a comprehensive configuration template for the Raspberry Pi MCP Server.
+# Copy this file to /etc/mcp-raspi/config.yml and customize for your deployment.
+#
+# Configuration is loaded in layers (later overrides earlier):
+#   1. Built-in defaults (safe initial values)
+#   2. This configuration file
+#   3. Environment variables (MCP_RASPI_* prefix)
+#   4. Command-line arguments
+#
+# Environment variable format: MCP_RASPI_<SECTION>__<KEY>
+#   Example: MCP_RASPI_SERVER__LOG_LEVEL=DEBUG
+#
+# For sensitive values (OAuth secrets, tokens), use /etc/mcp-raspi/secrets.env
+# and reference via environment variables.
+#
+# See docs/14-configuration-reference-and-examples.md for full details.
+# =============================================================================
+
+# Configuration version (for migration tracking)
+version: "1.0.0"
+
+# =============================================================================
+# Server Settings
+# =============================================================================
+server:
+  # Listen address and port
+  # Use 127.0.0.1 for local-only access (recommended with Cloudflare Tunnel)
+  # Use 0.0.0.0 for all interfaces (direct LAN access)
+  listen: "127.0.0.1:8000"
+  
+  # Log level: debug, info, warn, error
+  log_level: "info"
+
+# =============================================================================
+# Security & Authentication
+# =============================================================================
+security:
+  # Authentication mode:
+  #   - "cloudflare": Use Cloudflare Access/OAuth (recommended for internet exposure)
+  #   - "local": Local mode for LAN-only access (no external auth)
+  mode: "cloudflare"
+  
+  # Role definitions
+  # Each role has allowed safety levels:
+  #   - read_only: System info, metrics, logs
+  #   - safe_control: Service restart, GPIO control
+  #   - admin: Reboot, shutdown, updates
+  roles:
+    viewer:
+      allowed_levels: ["read_only"]
+    operator:
+      allowed_levels: ["read_only", "safe_control"]
+    admin:
+      allowed_levels: ["read_only", "safe_control", "admin"]
+  
+  # Map external identity (JWT claims) to internal roles
+  # This example maps Cloudflare Access groups to roles
+  role_mappings:
+    groups_to_roles:
+      "mcp-admins": "admin"
+      "mcp-operators": "operator"
+      "mcp-viewers": "viewer"
+  
+  # Cloudflare Access configuration (when mode: "cloudflare")
+  # cloudflare_access:
+  #   enabled: true
+  #   team_domain: "your-team.cloudflareaccess.com"
+  #   audience_tag: "your-app-audience-tag"
+  #   jwks_url: "https://your-team.cloudflareaccess.com/cdn-cgi/access/certs"
+  #   jwks_cache_ttl_seconds: 3600
+  
+  # Rate limiting
+  rate_limiting:
+    enabled: true
+    default_rpm: 60  # Requests per minute per user
+
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+logging:
+  # Application log file
+  app_log_path: "/var/log/mcp-raspi/app.log"
+  
+  # Audit log file (tracks all tool calls and security events)
+  audit_log_path: "/var/log/mcp-raspi/audit.log"
+  
+  # Log level: debug, info, warn, error
+  level: "info"
+  
+  # Also log to stdout (useful for development and container deployments)
+  log_to_stdout: false
+  
+  # Use journald instead of file logging (production option)
+  use_journald: false
+  
+  # Enable debug mode (extra diagnostic logging)
+  debug_mode: false
+  
+  # Log rotation settings (when using file logging)
+  max_bytes: 104857600  # 100 MB
+  backup_count: 5
+  retention_days: 30
+
+# =============================================================================
+# Tools Configuration
+# =============================================================================
+# Enable/disable tool namespaces
+tools:
+  system:
+    enabled: true
+  metrics:
+    enabled: true
+  service:
+    enabled: true
+  process:
+    enabled: true
+  gpio:
+    enabled: true
+  i2c:
+    enabled: true
+  camera:
+    enabled: true
+  logs:
+    enabled: true
+  manage:
+    enabled: true
+
+# =============================================================================
+# GPIO Configuration
+# =============================================================================
+gpio:
+  # Whitelist of BCM pins that MCP is allowed to control
+  # Non-listed pins are read-only or blocked for writes
+  # Common GPIO pins: 17, 18, 27, 22, 23, 24, 25, 5, 6, 13, 19, 26
+  allowed_pins: [17, 18, 27, 22, 23, 24]
+  
+  # Default mode for pins at startup: input, output
+  default_mode: "input"
+  
+  # Default pull configuration: none, up, down
+  default_pull: "none"
+  
+  # PWM settings (Phase 2+)
+  # pwm:
+  #   max_frequency_hz: 10000
+  #   min_duty_cycle: 0.0
+  #   max_duty_cycle: 100.0
+
+# =============================================================================
+# I2C Configuration
+# =============================================================================
+i2c:
+  buses:
+    - bus: 1  # /dev/i2c-1 (default on most Pi models)
+      # Access mode: full, read_only, disabled
+      mode: "full"
+      # Explicitly allow these addresses (empty = allow all except deny list)
+      allow_addresses: []
+      # Block these addresses (e.g., EEPROM or sensitive devices)
+      deny_addresses: [0x50, 0x51, 0x52, 0x53]  # Common EEPROM addresses
+
+# =============================================================================
+# Camera Configuration
+# =============================================================================
+camera:
+  # Enable camera tools
+  enabled: true
+  
+  # Root directory for captured media
+  media_root: "/var/lib/mcp-raspi/media"
+  
+  # Rate limit for capture operations
+  max_photos_per_minute: 30
+
+# =============================================================================
+# Power/Reboot Safeguards
+# =============================================================================
+power:
+  # Allow reboot via MCP tools
+  allow_reboot: true
+  
+  # Allow shutdown via MCP tools (more dangerous)
+  allow_shutdown: false
+  
+  # Minimum interval between reboots (rate limiting)
+  min_reboot_interval_seconds: 3600
+
+# =============================================================================
+# Metrics Storage & Sampling
+# =============================================================================
+metrics:
+  # Path to metrics database (SQLite)
+  storage_path: "/var/lib/mcp-raspi/metrics/metrics.db"
+  
+  # Default sampling interval for periodic metrics collection
+  sampling_interval_seconds: 60
+  
+  # Retention settings
+  max_retention_days: 30
+  
+  # Maximum database size (MB) - triggers cleanup when exceeded
+  max_size_mb: 500
+
+# =============================================================================
+# Service Management
+# =============================================================================
+service:
+  # Whitelist of services that can be managed
+  # Empty list = no restrictions (not recommended)
+  allowed_services: []
+  
+  # Safety settings
+  safety:
+    # Require confirmation for service restarts
+    require_confirmation: false
+    # Minimum time between restarts of same service
+    restart_cooldown_seconds: 60
+
+# =============================================================================
+# IPC (Inter-Process Communication)
+# =============================================================================
+ipc:
+  # Unix socket path for MCP server <-> privileged agent communication
+  socket_path: "/run/mcp-raspi/ops-agent.sock"
+  
+  # Default timeout for IPC requests (seconds)
+  request_timeout_seconds: 5
+
+# =============================================================================
+# Self-Update Configuration
+# =============================================================================
+updates:
+  # Update backend: python_package, git, archive, apt
+  backend: "python_package"
+  
+  # Python package name
+  package_name: "mcp-raspi"
+  
+  # Directories for release management
+  releases_dir: "/opt/mcp-raspi/releases"
+  staging_dir: "/opt/mcp-raspi/staging"
+  
+  # Default update channel: stable, beta, dev
+  default_channel: "stable"
+  
+  # Enable remote self-update via MCP tools
+  # WARNING: Enabling this allows remote code execution - ensure proper auth
+  enable_remote_server_update: false
+  
+  # Enable OS update tools (apt upgrade)
+  enable_os_update: false
+  
+  # Trusted update source URLs (for validation)
+  trusted_origins: []
+  
+  # Require signature verification for updates
+  require_signature: false
+  
+  # Number of release versions to keep
+  keep_versions: 3
+
+# =============================================================================
+# Testing & Sandbox Mode
+# =============================================================================
+testing:
+  # Sandbox mode for safe testing:
+  #   - "full": All high-risk operations simulated (no real changes)
+  #   - "partial": Allow some operations, block reboot/shutdown/updates
+  #   - "disabled": No sandbox, all operations behave normally
+  sandbox_mode: "disabled"
+
+# =============================================================================
+# Advanced Settings (Optional)
+# =============================================================================
+
+# Cloudflare Tunnel settings (if using cloudflared)
+# cloudflare_tunnel:
+#   tunnel_name: "raspi-mcp-server"
+#   config_path: "/etc/cloudflared/config.yml"
+
+# Fleet management settings (Phase 2+)
+# fleet:
+#   device_id: "pi-living-room"
+#   location: "Living Room"
+#   tags: ["indoor", "temperature", "motion"]

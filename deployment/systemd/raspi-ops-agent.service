@@ -1,0 +1,77 @@
+# Raspi Ops Agent systemd service unit
+# Raspberry Pi Privileged Operations Agent
+#
+# This service runs the privileged operations agent that performs
+# hardware and OS operations (GPIO, I2C, camera, system control).
+# It listens on a Unix domain socket and only accepts requests from
+# the MCP server.
+#
+# WARNING: This service runs with elevated privileges (root or mcp-raspi-ops)
+# because it needs direct hardware access and system control capabilities.
+#
+# Installation:
+#   sudo cp raspi-ops-agent.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable raspi-ops-agent
+#   sudo systemctl start raspi-ops-agent
+#
+# Logs:
+#   journalctl -u raspi-ops-agent -f
+#   tail -f /var/log/mcp-raspi/agent.log
+#
+# See docs/12-deployment-systemd-integration-and-operations-runbook.md for details
+
+[Unit]
+Description=Raspberry Pi Privileged Ops Agent
+Documentation=https://github.com/grammy-jiang/RaspberryPiOS-MCP
+After=network-online.target
+Wants=network-online.target
+
+# Start before MCP server
+Before=mcp-raspi-server.service
+
+[Service]
+Type=simple
+
+# Run as root for full hardware access
+# Alternative: Create a dedicated user with specific capabilities
+# User=mcp-raspi-ops
+# AmbientCapabilities=CAP_SYS_RAWIO CAP_SYS_ADMIN
+User=root
+Group=root
+
+# Working directory and executable
+WorkingDirectory=/opt/mcp-raspi/current
+ExecStart=/opt/mcp-raspi/current/venv/bin/python -m mcp_raspi_ops.agent --config /etc/mcp-raspi/config.yml
+
+# Environment
+EnvironmentFile=-/etc/mcp-raspi/secrets.env
+
+# Create runtime directory for IPC socket
+RuntimeDirectory=mcp-raspi
+RuntimeDirectoryMode=0750
+
+# Restart policy
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=30
+TimeoutStopSec=30
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=raspi-ops-agent
+
+# Allow access to hardware
+# Note: Running as root allows full hardware access
+# If running as non-root, additional capabilities and group memberships needed:
+# - gpio group for GPIO access
+# - i2c group for I2C access
+# - video group for camera access
+
+# Resource limits
+MemoryMax=100M
+MemoryHigh=80M
+
+[Install]
+WantedBy=multi-user.target
