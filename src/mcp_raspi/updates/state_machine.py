@@ -688,6 +688,8 @@ class UpdateStateMachine:
                 self._version_manager.load()
                 previous_version = self._version_manager.get_previous_version()
             except Exception:
+                # It is expected that loading the previous version may fail;
+                # this will be handled by the check below, which raises if no previous version is available.
                 pass
 
         if not previous_version:
