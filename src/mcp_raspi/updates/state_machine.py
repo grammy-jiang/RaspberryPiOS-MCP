@@ -423,8 +423,9 @@ class UpdateStateMachine:
                 try:
                     self._version_manager.load()
                     current_version = self._version_manager.get_current_version()
-                except Exception:
-                    pass
+                except Exception as ex:
+                    # Failed to load current version; treat as unknown. This is non-fatal.
+                    logger.warning(f"Could not determine current version: {ex}")
 
             self._state_data.target_version = latest_version
             self._state_data.old_version = current_version
