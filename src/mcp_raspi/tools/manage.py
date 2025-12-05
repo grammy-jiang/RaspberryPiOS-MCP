@@ -29,7 +29,10 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 # Global state machine instance (initialized lazily)
+# Note: This singleton pattern means concurrent updates are not supported.
+# The state machine is reset if configuration changes are detected.
 _UPDATE_STATE_MACHINE: UpdateStateMachine | None = None
+_UPDATE_STATE_MACHINE_CONFIG_HASH: str | None = None
 
 # Server start time (set when module loads, refined when server starts)
 _SERVER_START_TIME: float | None = None
@@ -264,11 +267,24 @@ def get_manage_tools() -> dict[str, Any]:
 # =============================================================================
 
 
+def _compute_config_hash(config: AppConfig) -> str:
+    """Compute a hash of the update-related configuration."""
+    import hashlib
+    config_str = f"{config.updates.backend}:{config.updates.package_name}:{config.updates.releases_dir}"
+    return hashlib.md5(config_str.encode()).hexdigest()
+
+
 def get_update_state_machine(
     config: AppConfig | None = None,
 ) -> UpdateStateMachine:
     """
     Get or create the global update state machine.
+
+    The state machine is a singleton. If the configuration changes, the
+    state machine is reset to ensure it uses the new configuration.
+
+    Note: Concurrent updates are not supported. Only one update operation
+    can run at a time.
 
     Args:
         config: Optional config to configure the state machine.
@@ -276,7 +292,15 @@ def get_update_state_machine(
     Returns:
         The UpdateStateMachine instance.
     """
-    global _UPDATE_STATE_MACHINE
+    global _UPDATE_STATE_MACHINE, _UPDATE_STATE_MACHINE_CONFIG_HASH
+
+    # Check if configuration has changed
+    if config is not None:
+        new_hash = _compute_config_hash(config)
+        if _UPDATE_STATE_MACHINE_CONFIG_HASH is not None and new_hash != _UPDATE_STATE_MACHINE_CONFIG_HASH:
+            logger.info("Update configuration changed, resetting state machine")
+            _UPDATE_STATE_MACHINE = None
+        _UPDATE_STATE_MACHINE_CONFIG_HASH = new_hash
 
     if _UPDATE_STATE_MACHINE is None:
         from mcp_raspi.updates.state_machine import UpdateStateMachine
@@ -324,8 +348,9 @@ def _configure_state_machine(
 
 def reset_update_state_machine() -> None:
     """Reset the global state machine (useful for testing)."""
-    global _UPDATE_STATE_MACHINE
+    global _UPDATE_STATE_MACHINE, _UPDATE_STATE_MACHINE_CONFIG_HASH
     _UPDATE_STATE_MACHINE = None
+    _UPDATE_STATE_MACHINE_CONFIG_HASH = None
 
 
 # =============================================================================

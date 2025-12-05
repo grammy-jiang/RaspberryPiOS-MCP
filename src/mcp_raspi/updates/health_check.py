@@ -270,7 +270,8 @@ class HealthChecker:
 
             client = IPCClient(socket_path=str(self.socket_path))
 
-            async with asyncio.timeout(timeout):
+            async def _do_tool_call() -> HealthCheckResult:
+                """Inner coroutine for the tool call operation."""
                 await client.connect()
                 try:
                     # Make a simple call to verify the server is responding
@@ -294,6 +295,8 @@ class HealthChecker:
                         )
                 finally:
                     await client.disconnect()
+
+            return await asyncio.wait_for(_do_tool_call(), timeout=timeout)
 
         except TimeoutError:
             return HealthCheckResult(
