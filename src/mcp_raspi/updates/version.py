@@ -665,7 +665,7 @@ class VersionManager:
             version=target_version,
             installed_at=datetime.now(UTC).isoformat(),
             source="rollback",
-            status="active",
+            status="pending",
             updated_from=old_version,
         )
 
