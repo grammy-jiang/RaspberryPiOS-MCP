@@ -13,7 +13,6 @@ Design follows Doc 10 §5.2-5.3 specifications.
 
 from __future__ import annotations
 
-import contextlib
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -285,7 +284,7 @@ class RollbackManager:
                     "target_version": target_version,
                     "available_versions": available,
                 },
-        )
+            )
 
         await perform_rollback(
             previous_version=target_version,
