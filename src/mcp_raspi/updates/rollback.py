@@ -81,8 +81,12 @@ async def perform_rollback(
         if version_manager:
             try:
                 # Load current state
-                with contextlib.suppress(Exception):
+                try:
                     version_manager.load()
+                except Exception as load_err:
+                    logger.warning(f"Failed to load version.json during rollback: {load_err}")
+                    # Skip recording rollback if load fails
+                    return
 
                 # Record rollback in version manager
                 version_manager.record_rollback(previous_version)
