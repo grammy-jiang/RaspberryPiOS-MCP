@@ -638,6 +638,53 @@ class VersionManager:
 
         return version_info
 
+    def record_rollback(
+        self,
+        target_version: str,
+        *,
+        save: bool = True,
+    ) -> None:
+        """
+        Record a rollback operation in version history.
+
+        Args:
+            target_version: Version that was rolled back to.
+            save: Whether to save changes to disk.
+        """
+        if self._version_info is None:
+            # Create new version info if not loaded
+            self._version_info = VersionInfo(current=target_version)
+
+        old_version = self._version_info.current
+
+        # Validate target version
+        parse_semantic_version(target_version)
+
+        # Create rollback history entry
+        entry = VersionHistory(
+            version=target_version,
+            installed_at=datetime.now(UTC).isoformat(),
+            source="rollback",
+            status="pending",
+            updated_from=old_version,
+        )
+
+        # Update version info
+        self._version_info.current = target_version
+        self._version_info.history.insert(0, entry)
+
+        # Limit history
+        if len(self._version_info.history) > 10:
+            self._version_info.history = self._version_info.history[:10]
+
+        if save:
+            self.save()
+
+        logger.info(
+            f"Recorded rollback from {old_version} to {target_version}",
+            extra={"old_version": old_version, "target_version": target_version},
+        )
+
     def to_dict(self) -> dict[str, Any]:
         """
         Convert current version info to dictionary.
